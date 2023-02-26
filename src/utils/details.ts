@@ -1,7 +1,16 @@
-import * as flatbuffers from 'flatbuffers';
 import fs from 'fs';
 import minimist from 'minimist';
-import { Bundle, BundleContent, BundleT, EMatRenderRoutines, MatBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle } from '@lib/idl/bundles/FxBundle_generated';
+
+import * as flatbuffers from 'flatbuffers';
+import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { MatBundleT } from '@lib/idl/bundles/auto/fx/mat-bundle';
+import { RoutineBytecodeBundleT } from '@lib/idl/bundles/auto/fx/routine-bytecode-bundle';
+import { RoutineGLSLSourceBundleT } from '@lib/idl/bundles/auto/fx/routine-glslsource-bundle';
+import { RoutineHLSLSourceBundleT } from '@lib/idl/bundles/auto/fx/routine-hlslsource-bundle';
+import { RoutineShaderBundleT } from '@lib/idl/bundles/auto/fx/routine-shader-bundle';
+import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
+import { EMatRenderRoutines } from '@lib/idl/bundles/auto/fx/emat-render-routines';
+import { RoutineSourceBundle } from '@lib/idl/bundles/auto/fx/routine-source-bundle';
 
 const argv = minimist(process.argv);
 
@@ -35,9 +44,9 @@ function main() {
     {
         console.log(`Fx: ${fx.name}\n`);
         console.log(JSON.stringify(fx.signature, null, '   '));
-        console.log(`\n`);
-        const deps = { templates: fx.content.renderPasses.map(pass => pass.geometry) };
-        console.log(JSON.stringify(deps, null, '   '));   
+        // console.log(`\n`);
+        // const deps = { templates: fx.content.renderPasses.map(pass => pass.geometry) };
+        // console.log(JSON.stringify(deps, null, '   '));   
 
         console.log('\n');
         console.log(fx.controls);

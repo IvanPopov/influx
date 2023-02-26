@@ -1,23 +1,29 @@
-import { TypeLayoutT } from "../bundles/FxBundle_generated";
 
-export { EOperation } from "./EOperations"
+export { EOperation } from "./EOperations";
+export { EComparisonFunc, EDepthWriteMask, EStencilOp, IDepthStencilState } from "./IDepthStencilState";
+
+import { TypeLayoutT } from "../bundles/auto/type-layout";
 
 export enum EAddrType {
     k_Registers,
     k_Input,
 
     k_PointerRegisters,
-    k_PointerInput
+    k_PointerInput,
+
+    k_PipelineStates
 };
 
 export enum EChunkType {
     k_Constants,
     k_Layout,
     k_Code,
-    k_Externs
+    k_Externs,
+    k_Shaders,
+    k_DepthStencilStates
 };
 
-export interface Constant
+export interface IConstant
 {
     name: string;
     size: number;
@@ -26,12 +32,21 @@ export interface Constant
     type: string;
 }
 
-export interface Extern
+export interface IExtern
 {
     id: number;
     name: string;
     ret: TypeLayoutT;
     params: TypeLayoutT[];
+}
+
+export interface IShader {
+    ver: string;
+    name: string;
+    args: {
+        type: string;
+        value: number | boolean;
+    }[];
 }
 
 type error = 'error';
@@ -42,14 +57,14 @@ export interface IMemory
     [index: number]: error;
 }
 
-export interface Numthreads
+export interface INumthreads
 {
     x: number;
     y: number;
     z: number;
 };
 
-export interface Numgroups
+export interface INumgroups
 {
     x: number;
     y: number;
@@ -77,7 +92,7 @@ export interface IUAV
 export interface IBundle 
 {
     play(): Uint8Array;
-    dispatch(numgroups: Numgroups, numthreads: Numthreads);
+    dispatch(numgroups: INumgroups, numthreads: INumthreads);
 
     setInput(slot: number, input: IMemory): void;
     getInput(slot: number): IMemory;
@@ -85,6 +100,6 @@ export interface IBundle
 
     setExtern(id: number, extern: any): void;
 
-    getLayout(): Constant[];
-    getExterns(): Extern[];
+    getLayout(): IConstant[];
+    getExterns(): IExtern[];
 }

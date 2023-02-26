@@ -2,7 +2,6 @@ import { assert, verbose } from '@lib/common';
 import * as VM from '@lib/fx/bytecode/VM';
 import { asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import { FxTranslator } from '@lib/fx/translators/FxTranslator';
-import { BundleT, EPartRenderRoutines, EPartSimRoutines, PartBundleT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TypeLayout, TypeLayoutT, UAVBundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from "@lib/idl/bytecode";
 import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
@@ -11,6 +10,17 @@ import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
 import { IParticleDebugViewer, ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { EUsage, IConstantBuffer } from '@lib/idl/ITechnique';
 import { IMap } from '@lib/idl/IMap';
+
+import { UAVBundleT } from '@lib/idl/bundles/auto/fx/uavbundle';
+import { TypeLayoutT } from '@lib/idl/bundles/auto/type-layout';
+import { RoutineBytecodeBundleT } from '@lib/idl/bundles/auto/fx/routine-bytecode-bundle';
+import { EPartSimRoutines } from '@lib/idl/bundles/auto/fx/epart-sim-routines';
+import { BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { PartBundleT } from '@lib/idl/bundles/auto/fx/part-bundle';
+import { RoutineShaderBundleT } from '@lib/idl/bundles/auto/fx/routine-shader-bundle';
+import { EPartRenderRoutines } from '@lib/idl/bundles/auto/fx/epart-render-routines';
+import { RoutineGLSLSourceBundleT } from '@lib/idl/bundles/auto/fx/routine-glslsource-bundle';
+import { RoutineSourceBundle } from '@lib/idl/bundles/auto/fx/routine-source-bundle';
 
 type IMemory = Bytecode.IMemory;
 type IUAVResource = ReturnType<typeof VM.createUAV>;

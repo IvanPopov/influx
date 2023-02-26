@@ -372,7 +372,7 @@ export interface IVariableDeclInstruction extends IDeclInstruction, ITypedInstru
 export interface IFunctionDeclInstruction extends IDeclInstruction {
     readonly def: IFunctionDefInstruction;
     readonly impl: IStmtBlockInstruction;
-    readonly attributes: IAttributeInstruction[];
+    readonly attrs: IAttributeInstruction[];
 }
 
 
@@ -607,7 +607,7 @@ export interface IIfStmtInstruction extends IStmtInstruction {
     readonly cond: IExprInstruction;
     readonly conseq: IStmtInstruction;
     readonly contrary: IStmtInstruction;
-    readonly attributes: IAttributeInstruction[];
+    readonly attrs: IAttributeInstruction[];
 }
 
 

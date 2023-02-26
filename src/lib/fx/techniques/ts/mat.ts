@@ -1,6 +1,12 @@
-import { BundleT, EMatRenderRoutines, MatBundleT, RoutineGLSLSourceBundle, RoutineGLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle } from '@lib/idl/bundles/FxBundle_generated';
 import { IMap } from '@lib/idl/IMap';
 import { EUsage, IConstantBuffer, ITechnique, ITechniquePassDesc } from '@lib/idl/ITechnique';
+
+import { BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { MatBundleT } from '@lib/idl/bundles/auto/fx/mat-bundle';
+import { RoutineShaderBundleT } from '@lib/idl/bundles/auto/fx/routine-shader-bundle';
+import { EMatRenderRoutines } from '@lib/idl/bundles/auto/fx/emat-render-routines';
+import { RoutineGLSLSourceBundleT } from '@lib/idl/bundles/auto/fx/routine-glslsource-bundle';
+import { RoutineSourceBundle } from '@lib/idl/bundles/auto/fx/routine-source-bundle';
 
 // tslint:disable-next-line:max-func-body-length
 function createMaterialFromBundle(bundle: BundleT): ITechnique {

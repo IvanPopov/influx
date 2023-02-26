@@ -8,7 +8,7 @@ export interface IIfStmtInstructionSettings extends IInstructionSettings {
     cond: IExprInstruction;
     conseq: IStmtInstruction;
     contrary?: IStmtInstruction;
-    attributes?: IAttributeInstruction[];
+    attrs?: IAttributeInstruction[];
 }
 
 
@@ -20,15 +20,15 @@ export class IfStmtInstruction extends StmtInstruction implements IIfStmtInstruc
     readonly cond: IExprInstruction;
     readonly conseq: IStmtInstruction;
     readonly contrary: IStmtInstruction;
-    readonly attributes: IAttributeInstruction[];
+    readonly attrs: IAttributeInstruction[];
     
-    constructor({ cond, conseq, attributes = null, contrary = null, ...settings }: IIfStmtInstructionSettings) {
+    constructor({ cond, conseq, attrs = null, contrary = null, ...settings }: IIfStmtInstructionSettings) {
         super({ instrType: EInstructionTypes.k_IfStmt, ...settings });
 
         this.cond = Instruction.$withParent(cond, this);
         this.conseq = Instruction.$withParent(conseq, this);
         this.contrary = Instruction.$withParent(contrary, this);
-        this.attributes = (attributes || []).map(attr => Instruction.$withParent(attr, this));
+        this.attrs = (attrs || []).map(attr => Instruction.$withParent(attr, this));
     }
 
 

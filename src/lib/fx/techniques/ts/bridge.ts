@@ -1,12 +1,14 @@
 import { fromBundleMemory, asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
-import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
 import { IEmitter } from '@lib/idl/emitter';
 import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { ITechnique } from '@lib/idl/ITechnique';
-import * as flatbuffers from 'flatbuffers';
 import { copyTsEmitter, createTsEmitter, destroyTsEmitter, createTsTexture, createTsTrimesh, destroyTsTexture, destroyTsTrimesh } from './emitter';
 import { copyTsMaterial, createTsMaterial, destroyTsMaterial } from './mat';
+
+import * as flatbuffers from 'flatbuffers';
+import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
 
 const isEmitter = tech => tech?.getType() === 'emitter';
 const isMat = tech => tech?.getType() === 'material';

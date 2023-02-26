@@ -4,7 +4,7 @@ import { IInstructionSettings, Instruction } from "./Instruction";
 
 export interface IAttributeInstructionSettings extends IInstructionSettings {
     name: string;
-    args: ILiteralInstruction<boolean | number>[];
+    args?: ILiteralInstruction<boolean | number>[];
 }
 
 /**
@@ -18,7 +18,7 @@ export class AttributeInstruction extends Instruction implements IAttributeInstr
     readonly name: string;
     readonly args: ILiteralInstruction<number | boolean>[];
 
-    constructor({ name, args, ...settings }: IAttributeInstructionSettings) {
+    constructor({ name, args = null, ...settings }: IAttributeInstructionSettings) {
         super({ instrType: EInstructionTypes.k_Attribute, ...settings });
 
         this.name = name;

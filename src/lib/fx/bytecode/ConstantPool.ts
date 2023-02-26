@@ -1,14 +1,13 @@
 import { assert, isNull } from "@lib/common";
+import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { T_BOOL, T_FLOAT, T_FLOAT2, T_FLOAT3, T_FLOAT4, T_INT, T_INT2, T_INT3, T_INT4, T_UINT } from "@lib/fx/analisys/SystemScope";
-import { EAddrType } from "@lib/idl/bytecode";
-import { EInstructionTypes, IExprInstruction, IInitExprInstruction, ILiteralInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
-import { BoolInstruction } from "@lib/fx/analisys/instructions/BoolInstruction";
-import { CBUFFER0_REGISTER } from "./Bytecode";
-import PromisedAddress from "./PromisedAddress";
+import { IConstant, EAddrType } from "@lib/idl/bytecode";
+import { EInstructionTypes, IInitExprInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { FloatInstruction } from "../analisys/instructions/FloatInstruction";
-import { InitExprInstruction } from "../analisys/instructions/InitExprInstruction";
+import { CBUFFER0_REGISTER } from "./Bytecode";
 import { i32ToU8Array } from "./common";
+import PromisedAddress from "./PromisedAddress";
 
 export class ConstantPoolMemory {
     byteArray: Uint8Array;
@@ -49,17 +48,10 @@ export class ConstantPoolMemory {
     }
 }
 
-export interface IConstantReflection {
-    name: string;
-    size: number;
-    offset: number;
-    semantic: string;
-    type: string;
-}
 
 export class ConstanPool {
     protected _data: ConstantPoolMemory = new ConstantPoolMemory;
-    protected _knownConstants: IConstantReflection[] = [];
+    protected _knownConstants: IConstant[] = [];
 
     deref(decl: IVariableDeclInstruction): PromisedAddress {
         assert(decl.isGlobal() && (decl.type.isUniform() || decl.isConstant()));
@@ -70,35 +62,40 @@ export class ConstanPool {
             let addr = null;
             let defaultValue = null;
             if (!isNull(initExpr)) {
-                switch (initExpr.type.name) {
-                    case T_FLOAT.name:
-                        defaultValue = new Float32Array([ (initExpr as FloatInstruction).value ]);
-                        break;
-                    case T_UINT.name:
-                        defaultValue = new Uint32Array([ (initExpr as IntInstruction).value ]);
-                        break;
-                    case T_BOOL.name:
-                        const value = (initExpr as BoolInstruction).value;
-                        defaultValue = new Int32Array([ value ? 1 : 0 ]);
-                        break;
-                    case T_INT.name:
-                        defaultValue = new Int32Array([ (initExpr as IntInstruction).value ]);
-                        break;
-                    case T_FLOAT2.name:
-                    case T_FLOAT3.name:
-                    case T_FLOAT4.name:
-                        assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
-                        defaultValue = new Float32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as FloatInstruction).value));
-                        break;
-                    case T_INT2.name:
-                    case T_INT3.name:
-                    case T_INT4.name:
-                        assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
-                        defaultValue = new Int32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as IntInstruction).value));
-                        break;
-                    default:
-                        assert(false, 'unsupported');
-                        return PromisedAddress.INVALID;
+                if (decl.type.isNotBaseArray()) {
+                    // todo: add support
+                    assert(false, 'arrays are not yet supported (!)');
+                } else {
+                    switch (initExpr.type.name) {
+                        case T_FLOAT.name:
+                            defaultValue = new Float32Array([ (initExpr as FloatInstruction).value ]);
+                            break;
+                        case T_UINT.name:
+                            defaultValue = new Uint32Array([ (initExpr as IntInstruction).value ]);
+                            break;
+                        case T_BOOL.name:
+                            const value = (initExpr as BoolInstruction).value;
+                            defaultValue = new Int32Array([ value ? 1 : 0 ]);
+                            break;
+                        case T_INT.name:
+                            defaultValue = new Int32Array([ (initExpr as IntInstruction).value ]);
+                            break;
+                        case T_FLOAT2.name:
+                        case T_FLOAT3.name:
+                        case T_FLOAT4.name:
+                            assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
+                            defaultValue = new Float32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as FloatInstruction).value));
+                            break;
+                        case T_INT2.name:
+                        case T_INT3.name:
+                        case T_INT4.name:
+                            assert(initExpr.instructionType === EInstructionTypes.k_InitExpr);
+                            defaultValue = new Int32Array((<IInitExprInstruction>initExpr).args.map(arg => (arg as IntInstruction).value));
+                            break;
+                        default:
+                            assert(false, 'unsupported');
+                            return PromisedAddress.INVALID;
+                    }
                 }
             }
             addr = this.addUniform(size, `${name}${semantic? `:${semantic}`: '' }`, defaultValue);
@@ -183,7 +180,7 @@ export class ConstanPool {
         return this._data.byteLength;
     }
 
-    dump(): IConstantReflection[] {
+    dump(): IConstant[] {
         return this._knownConstants;
     }
 }

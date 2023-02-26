@@ -1,3 +1,7 @@
+include "type.fbs";
+include "cbuffer.fbs";
+include "technique11.fbs";
+
 namespace Fx;
 
 table BundleSignature 
@@ -15,22 +19,7 @@ table BundleMeta
     source: string;
 }
 
-table TypeField 
-{
-    type: TypeLayout;
-    name: string; 
-    semantic: string;
-    size: uint; 
-    padding: uint;
-}
 
-table TypeLayout 
-{
-    fields: [ TypeField ];
-    length: int;
-    name: string;
-    size: uint;                 // byte length
-}
 
 
 table UAVBundle 
@@ -68,14 +57,6 @@ table TrimeshBundle
     faceAdjacencyName: string;
 }
 
-
-table CBBundle
-{
-    name: string;
-    slot: uint;
-    size: uint;
-    fields: [ TypeField ];
-}
 
 union RoutineBundle { RoutineBytecodeBundle, RoutineShaderBundle }
 
@@ -216,10 +197,6 @@ table MatBundle
     renderPasses: [ MatRenderPass ];
 }
 
-table Technique11Bundle
-{
-    // todo
-}
 
 union BundleContent { PartBundle, MatBundle, Technique11Bundle }
 

@@ -17,6 +17,7 @@ import { SRVPool } from "./SRVPool";
 import { UAVPool } from "./UAVPool";
 import { IMap } from "@lib/idl/IMap";
 import { Externs } from "./Externs";
+import { PipelineStates } from "./PipelineStates";
 
 export enum EErrors {
     k_UnsupportedConstantType,
@@ -109,6 +110,7 @@ export function ContextBuilder(uri: IFile = null) {
 
     const instructions = new InstructionList;
     const constants = new ConstanPool;
+    const pipeline = new PipelineStates;
     const uavs = new UAVPool;
     const srvs = new SRVPool;
     const externs = new Externs;
@@ -650,6 +652,7 @@ export function ContextBuilder(uri: IFile = null) {
         close,
         ret,
         constants,
+        pipeline,
         externs,
         uavs,
         srvs,

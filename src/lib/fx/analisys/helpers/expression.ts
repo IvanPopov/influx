@@ -1,5 +1,6 @@
 import { assert, isNull } from "@lib/common";
-import { EInstructionTypes, IAssignmentExprInstruction, IComplexExprInstruction, IExprInstruction, IIdExprInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction, IExprInstruction, IIdExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { instruction } from "./instruction";
 
 export namespace expression {
     /**
@@ -57,4 +58,64 @@ export namespace expression {
                 return null;
         }
     }
+
+    
+    function evalVal(val: IInstruction) {
+        if (!val) {
+            return 0;
+        }
+
+        if (instruction.isLiteral(val)) {
+            return (<ILiteralInstruction<number>>val).value;
+        } 
+            
+        if (val.instructionType === EInstructionTypes.k_CastExpr) {
+            return evalConst((<ICastExprInstruction>val).expr);
+        }
+
+        if (val.instructionType === EInstructionTypes.k_IdExpr) {
+            const idExpr = (<IIdExprInstruction>val);
+            if (idExpr.decl.isGlobal()) { // and is constant?
+                console.assert(idExpr.decl.initExpr.instructionType !== EInstructionTypes.k_InitExpr);
+                return evalConst(idExpr.decl.initExpr);
+            }
+        }
+        
+        console.error(`expr "${val.toCode()}" could not be evaluated`);
+        return -1;
+    }
+
+    // simples possible evalator for minimal compartibility
+    export function evalConst(expr: IExprInstruction): number
+    {
+        const val = evalVal(expr);
+        if (val >= 0) {
+            return val;
+        }
+
+        if (expr.instructionType !== EInstructionTypes.k_ArithmeticExpr) {
+            console.error(`expr "${expr.toCode()}" could not be evaluated`);
+            return -1;
+        }
+
+        const { left, right, operator } = <IArithmeticExprInstruction>expr;
+        const lval = evalConst(left);
+        const rval = evalConst(right);
+        
+        if (lval >= 0 && rval >= 0) {
+            switch (operator) {
+                // todo: use round ? check if integers only
+                case '*': return rval * lval;
+                case '/': return rval / lval;
+                case '+': return rval + lval;
+                case '-': return rval - lval;
+                default:
+                    console.error('unsupported operator');
+            }
+        }
+
+        console.error(`expr "${expr.toCode()}" could not be evaluated`);
+        return -1;
+    }
+
 }

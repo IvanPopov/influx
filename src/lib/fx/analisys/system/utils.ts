@@ -1,14 +1,19 @@
 import { assert, isNull } from "@lib/common";
-import { EInstructionTypes, ICbufferInstruction, IFunctionDeclInstruction, IRegister, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableUsage } from "@lib/idl/IInstruction";
-import { IMap } from "@lib/idl/IMap";
+import { types } from '@lib/fx/analisys/helpers';
 import { IdInstruction } from "@lib/fx/analisys/instructions/IdInstruction";
 import { SystemTypeInstruction } from "@lib/fx/analisys/instructions/SystemTypeInstruction";
 import { VariableDeclInstruction } from "@lib/fx/analisys/instructions/VariableDeclInstruction";
 import { VariableTypeInstruction } from "@lib/fx/analisys/instructions/VariableTypeInstruction";
+import { CodeContext, CodeEmitter } from "@lib/fx/translators/CodeEmitter";
 import { EAnalyzerErrors } from "@lib/idl/EAnalyzerErrors";
-import { SystemFunctionInstruction } from "../instructions/SystemFunctionInstruction";
+import {
+    EInstructionTypes, IAttributeInstruction, ICbufferInstruction, IFunctionDeclInstruction, IFunctionDefInstruction,
+    IRegister, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableUsage
+} from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
+import { AttributeInstruction } from "../instructions/AttributeInstruction";
 import { FunctionDefInstruction } from "../instructions/FunctionDefInstruction";
-import { types } from '@lib/fx/analisys/helpers';
+import { SystemFunctionInstruction } from "../instructions/SystemFunctionInstruction";
 
 export const USE_STRICT_HALF_TYPE = false;
 export const TEMPLATE_TYPE = "template";
@@ -126,8 +131,7 @@ export function isTemplate(typename: string): boolean {
     return typename.split(' ').slice(-1)[0] === TEMPLATE_TYPE;
 }
 
-export function parseType(scope: IScope, typename: string, typevalue: string = null)
-{
+export function parseType(scope: IScope, typename: string, typevalue: string = null) {
     assert(typevalue !== TEMPLATE_TYPE);
     const usagesType = (typevalue ? typename.replace(TEMPLATE_TYPE, typevalue) : typename).split(' ');
     const hash = usagesType.slice(-1)[0];
@@ -136,7 +140,7 @@ export function parseType(scope: IScope, typename: string, typevalue: string = n
 
     assert(type !== null);
     usages.forEach(usage => assert(['in', 'out', 'inout'].indexOf(usage) !== -1));
-    
+
     return { type, usages, hash };
 }
 
@@ -166,27 +170,33 @@ export const USAGE_CONTROL_FLOW = 0x100;
 function generateSystemFunctionInstance(scope: IScope, retType: ITypeDesc, name: string, paramTypes: ITypeDesc[], usage: number) {
     const paramList = paramTypes.map((typeDesc, n) => {
         return new VariableDeclInstruction({
-            type: new VariableTypeInstruction({ 
-                type: typeDesc.type, 
+            type: new VariableTypeInstruction({
+                type: typeDesc.type,
                 usages: typeDesc.usages,
-                scope 
+                scope
             }),
             id: new IdInstruction({ name: `p${n}`, scope }),
             scope
         });
     });
 
-    const returnType = new VariableTypeInstruction({ 
+    const returnType = new VariableTypeInstruction({
         type: retType.type,
-        usages: retType.usages, 
-        scope 
+        usages: retType.usages,
+        scope
     });
 
     const pixel = !!(usage & USAGE_PS);
     const vertex = !!(usage & USAGE_VS);
+    const extern = !!(usage & USAGE_CONTROL_FLOW);
+    const attrs: IAttributeInstruction[] = [];
+    if (extern) {
+        attrs.push(new AttributeInstruction({ scope, name: 'extern' }));
+    }
+
     const id = new IdInstruction({ scope, name });
     const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
-    const func = new SystemFunctionInstruction({ scope, def, pixel, vertex });
+    const func = new SystemFunctionInstruction({ scope, def, pixel, vertex, attrs });
 
     scope.addFunction(func);
 }
@@ -335,11 +345,11 @@ export const VECTOR_TYPES = [
 
 
 export const MATRIX_TYPES = [
-    'bool2x2', 'bool2x3', 'bool2x4', 'bool3x2', 'bool3x3', 'bool3x4', 'bool4x2', 'bool4x3', 'bool4x4', 
-    'int2x2', 'int2x3', 'int2x4', 'int3x2', 'int3x3', 'int3x4', 'int4x2', 'int4x3', 'int4x4', 
-    'uint2x2', 'uint2x3', 'uint2x4', 'uint3x2', 'uint3x3', 'uint3x4', 'uint4x2', 'uint4x3', 'uint4x4', 
-    'half2x2', 'half2x3', 'half2x4', 'half3x2', 'half3x3', 'half3x4', 'half4x2', 'half4x3', 'half4x4', 
-    'float2x2', 'float2x3', 'float2x4', 'float3x2', 'float3x3', 'float3x4', 'float4x2', 'float4x3', 'float4x4', 
+    'bool2x2', 'bool2x3', 'bool2x4', 'bool3x2', 'bool3x3', 'bool3x4', 'bool4x2', 'bool4x3', 'bool4x4',
+    'int2x2', 'int2x3', 'int2x4', 'int3x2', 'int3x3', 'int3x4', 'int4x2', 'int4x3', 'int4x4',
+    'uint2x2', 'uint2x3', 'uint2x4', 'uint3x2', 'uint3x3', 'uint3x4', 'uint4x2', 'uint4x3', 'uint4x4',
+    'half2x2', 'half2x3', 'half2x4', 'half3x2', 'half3x3', 'half3x4', 'half4x2', 'half4x3', 'half4x4',
+    'float2x2', 'float2x3', 'float2x4', 'float3x2', 'float3x3', 'float3x4', 'float4x2', 'float4x3', 'float4x4',
 ];
 
 export const BASE_TYPES = [
@@ -385,14 +395,25 @@ export const DEPTH_STENCIL_STATE = 'DepthStencilState';
 export const RASTERIZER_STATE = 'RasterizerState';
 
 const skipTemplate = (name: string) => name.match(/([\w][\w\d]+)(<[\w][\w\d]+>)?/)[1];
+// note: arrays like "Texture2D[5]" also return true in this checks (!)
 export const isUAV = (type: ITypeInstruction) => UAV_TYPES.includes(skipTemplate(type.name));
 export const isTexture = (type: ITypeInstruction) => TEXTURE_TYPES.includes(skipTemplate(type.name));
 export const isBuffer = (type: ITypeInstruction) => BUFFER_TYPES.includes(skipTemplate(type.name));
 
+// note: arrays like "BlendState[5]" also return true in this checks (!)
 export const isSamplerState = (type: ITypeInstruction) => SAMPLER_TYPES.includes(type.name);
-// export const isBlendState = (type: ITypeInstruction) => [BLEND_STATE].includes(type.name);
-// export const isDepthStencilState = (type: ITypeInstruction) => [DEPTH_STENCIL_STATE].includes(type.name);
+export const isBlendState = (type: ITypeInstruction) => [BLEND_STATE].includes(type.name);
+export const isDepthStencilState = (type: ITypeInstruction) => [DEPTH_STENCIL_STATE].includes(type.name);
+export const isRasterizerState = (type: ITypeInstruction) => [RASTERIZER_STATE].includes(type.name);
 
+// note: arrays like "BlendState[5]" also return true in this checks (!)
+export const isPipelineState = (type: ITypeInstruction) => [
+    BLEND_STATE,
+    DEPTH_STENCIL_STATE,
+    RASTERIZER_STATE
+].includes(type.name);
+
+// note: arrays like "float4[4]" return false in this checks (!)
 export const isBase = (type: ITypeInstruction) => BASE_TYPES.includes(types.signature(type));
 export const isVectorType = (type: ITypeInstruction) => VECTOR_TYPES.includes(types.signature(type));
 export const isMatrixType = (type: ITypeInstruction) => MATRIX_TYPES.includes(types.signature(type));
@@ -448,3 +469,69 @@ export function resolveRegister(decl: IVariableDeclInstruction | ICbufferInstruc
     return { type, index };
 }
 
+
+///////////////////////////////////////////////////////
+
+
+function alignL(content: string, len: number) {
+    let diff = Math.max(0, len - content.length);
+    return `${Array(diff).fill(' ').join('')}${content}`;
+}
+
+
+function alignR(content: string, len: number) {
+    let diff = Math.max(0, len - content.length);
+    return `${content}${Array(diff).fill(' ').join('')}`;
+}
+
+class Emitter<ContextT extends CodeContext> extends CodeEmitter<ContextT> {
+    emitFunctionDefinition(ctx: ContextT, def: IFunctionDefInstruction, attrs: IAttributeInstruction[]): void {
+        const { typeName } = this.resolveType(ctx, def.returnType);
+        // this.emitKeyword(alignL(typeName, 10));
+        // this.emitKeyword(alignR(def.name, 16));
+        attrs?.forEach(attr => this.emitLine(`[${attr.name}]`));
+        this.emitKeyword(typeName);
+        this.emitKeyword(def.name);
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitParams(ctx, def.params);
+        this.emitChar(')');
+    }
+}
+
+export function debugPrint(scope: IScope) {
+
+    const ctx = new CodeContext;
+    const emitter = new Emitter({ omitEmptyParams: true });
+
+    const { functions, types, typeTemplates } = scope;
+
+    emitter.begin();
+    for (let name in types) {
+        const type = types[name];
+        emitter.emitLine(`// ${type.name};`);
+    }
+    emitter.end();
+
+    emitter.begin();
+    for (let name in typeTemplates) {
+        const tpl = typeTemplates[name];
+        emitter.emitLine(`// ${tpl.name};`);
+    }
+    emitter.end();
+
+    emitter.begin();
+    for (let name in functions) {
+        const overloads = functions[name];
+
+        for (const fn of overloads) {
+            emitter.emitFunctionDefinition(ctx, fn.def, fn.attrs);
+            emitter.emitChar(';');
+            emitter.emitNewline();
+        }
+
+        emitter.emitNewline();
+    }
+    emitter.end();
+    return emitter.toString();
+}

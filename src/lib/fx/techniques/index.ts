@@ -1,4 +1,3 @@
-import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import * as Bytecode from '@lib/idl/bytecode';
 
 import * as WASMPipe from "./cpp/bridge";
@@ -29,6 +28,8 @@ export function switchRuntime(runtime?: 'wasm' | 'js') {
 // hack
 import * as flatbuffers from 'flatbuffers';
 import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
+import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
 function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
     // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
     if (data instanceof Uint8Array) {

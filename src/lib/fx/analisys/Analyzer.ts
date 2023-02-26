@@ -373,7 +373,7 @@ function checkFunctionForRecursion(context: Context, func: IFunctionDeclInstruct
             //       version with implementation
             fdecl = fdecl.scope.findFunctionInScope(fdecl);
             if (isNull(fdecl.impl)) {
-                if (fdecl.attributes.find(attr => attr.name === 'extern')) {
+                if (fdecl.attrs.find(attr => attr.name === 'extern')) {
                     // todo: use context info
                     context.warn(instr.sourceNode, EWarnings.ExternCall);
                 } else {
@@ -1878,7 +1878,7 @@ export class Analyzer {
 
     protected createTracePseudoDeclaration(context: Context, program: ProgramScope, args: IExprInstruction[]): IFunctionDeclInstruction {
         const scope = program.globalScope; // global scope (!)
-        const attributes = [new AttributeInstruction({ scope, name: "extern", args: null })];
+        const attrs = [new AttributeInstruction({ scope, name: "extern", args: null })];
         const impl = null;
         const returnType = VariableTypeInstruction.wrap(T_VOID, scope);
         const id = new IdInstruction({ scope, name: "trace" });
@@ -1890,7 +1890,7 @@ export class Analyzer {
             return new VariableDeclInstruction({ scope, type, id, usageFlags });
         });
         const def = new FunctionDefInstruction({ scope, returnType, id, paramList });
-        const traceFunc = new FunctionDeclInstruction({ scope, def, impl, attributes });
+        const traceFunc = new FunctionDeclInstruction({ scope, def, impl, attrs });
         scope.addFunction(traceFunc);
         return traceFunc;
     }
@@ -2918,12 +2918,12 @@ export class Analyzer {
 
         program.push(EScopeType.k_Default);
 
-        const attributes = [];
-        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
-            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        const attrs = [];
+        while (children[children.length - 1 - attrs.length].name === 'Attribute') {
+            attrs.push(this.analyzeAttribute(context, program, children[children.length - 1 - attrs.length]));
         }
 
-        const def = this.analyzeFunctionDef(context, program, children[children.length - 1 - attributes.length]);
+        const def = this.analyzeFunctionDef(context, program, children[children.length - 1 - attrs.length]);
 
         if (isNull(def)) {
             // TODO: emit proper error
@@ -2991,7 +2991,7 @@ export class Analyzer {
         }
 
         assert(scope == globalScope);
-        func = new FunctionDeclInstruction({ sourceNode, scope, def, impl, annotation, attributes });
+        func = new FunctionDeclInstruction({ sourceNode, scope, def, impl, annotation, attrs: attrs });
 
         // NOTE: possible implicit replacement of function 
         //       without implementaion inside addFunction() call.
@@ -3447,14 +3447,14 @@ export class Analyzer {
         const scope = program.currentScope;
         const children = sourceNode.children;
 
-        let attributes = [];
-        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
-            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        let attrs = [];
+        while (children[children.length - 1 - attrs.length].name === 'Attribute') {
+            attrs.push(this.analyzeAttribute(context, program, children[children.length - 1 - attrs.length]));
         }
 
-        const isIfElse = (children.length - attributes.length === 7);
+        const isIfElse = (children.length - attrs.length === 7);
 
-        const condNode = children[children.length - 3 - attributes.length];
+        const condNode = children[children.length - 3 - attrs.length];
         const cond = this.analyzeExpr(context, program, condNode);
 
         if (!cond || !types.equals(asRelaxedType(cond.type), T_BOOL)) {
@@ -3478,7 +3478,7 @@ export class Analyzer {
             return null;
         }
 
-        return new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attributes });
+        return new IfStmtInstruction({ sourceNode, scope, cond, conseq, contrary, attrs: attrs });
     }
 
 
@@ -3514,9 +3514,9 @@ export class Analyzer {
         let cond: IExprInstruction = null;
         let step: IExprInstruction = null;
 
-        let attributes = [];
-        while (children[children.length - 1 - attributes.length].name === 'Attribute') {
-            attributes.push(this.analyzeAttribute(context, program, children[children.length - 1 - attributes.length]));
+        let attrs = [];
+        while (children[children.length - 1 - attrs.length].name === 'Attribute') {
+            attrs.push(this.analyzeAttribute(context, program, children[children.length - 1 - attrs.length]));
         }
 
         if (children[1].name === 'ERROR') {
@@ -3525,8 +3525,8 @@ export class Analyzer {
 
         program.push();
 
-        const initSourceNode = children[children.length - 3 - attributes.length];
-        const condSourceNode = children[children.length - 4 - attributes.length];
+        const initSourceNode = children[children.length - 3 - attrs.length];
+        const condSourceNode = children[children.length - 4 - attrs.length];
 
         init = this.analyzeForInit(context, program, initSourceNode);
         cond = this.analyzeForCond(context, program, condSourceNode);
@@ -3545,7 +3545,7 @@ export class Analyzer {
             // EAnalyzerErrors.InvalidForConditionRelation
         }
 
-        if (children.length === 7 + attributes.length) {
+        if (children.length === 7 + attrs.length) {
             step = this.analyzeForStep(context, program, children[2]);
             if (isNull(step)) {
                 context.error(children[2], EErrors.InvalidForStepEmpty);
@@ -4067,7 +4067,7 @@ export class Analyzer {
      */
     protected analyzeState(context: Context, program: ProgramScope, sourceNode: IParseNode): IMap<any> {
         const children = sourceNode.children;
-        const stateName = children[children.length - 1].value.toUpperCase();
+        const stateName = children[children.length - 1].value;
         const stateExprNode = children[children.length - 3];
         const exprNode = stateExprNode.children[stateExprNode.children.length - 1];
 
@@ -4089,10 +4089,10 @@ export class Analyzer {
         else {
             let value: string = '';
             if (exprNode.value === '{') {
-                value = stateExprNode.children[1].value.toUpperCase();
+                value = stateExprNode.children[1].value;
             }
             else {
-                value = exprNode.value.toUpperCase();
+                value = exprNode.value;
             }
 
             // todo: convert value to native type

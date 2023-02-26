@@ -1,0 +1,10 @@
+include "type.fbs";
+
+// represents cbuffer
+table CBBundle
+{
+    name: string;
+    slot: uint;
+    size: uint;
+    fields: [ TypeField ];
+}

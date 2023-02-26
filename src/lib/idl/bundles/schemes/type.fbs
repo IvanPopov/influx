@@ -1,0 +1,17 @@
+
+table TypeField 
+{
+    type: TypeLayout;
+    name: string; 
+    semantic: string;
+    size: uint; 
+    padding: uint;
+}
+
+table TypeLayout 
+{
+    fields: [ TypeField ];
+    length: int;
+    name: string;
+    size: uint;                 // byte length
+}

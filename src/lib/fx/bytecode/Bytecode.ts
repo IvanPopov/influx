@@ -10,7 +10,7 @@ import { createTextDocument } from "@lib/fx/TextDocument";
 import { EAddrType, EChunkType } from "@lib/idl/bytecode";
 import { EOperation } from "@lib/idl/bytecode/EOperations";
 import {
-    EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, IComplexExprInstruction,
+    EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileShader11Instruction, IComplexExprInstruction,
     IConditionalExprInstruction, IConstructorCallInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction,
     IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction,
     IInstruction, ILiteralInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction,
@@ -19,7 +19,6 @@ import {
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { DiagnosticException, Diagnostics } from "@lib/util/Diagnostics";
 
-import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
 import { IDiagnosticReport } from "@lib/idl/IDiagnostics";
 import { IFile } from "@lib/idl/parser/IParser";
 import { i32ToU8Array } from "./common";
@@ -27,6 +26,9 @@ import { ContextBuilder, EErrors, IContext } from "./Context";
 import { CDL } from "./DebugLayout";
 import PromisedAddress from "./PromisedAddress";
 import sizeof from "./sizeof";
+
+import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
+import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
 
 // [00 - 01) cbs
 // [01 - 17) inputs
@@ -202,8 +204,123 @@ function codeChunk(ctx: IContext): ArrayBuffer {
     return data.buffer;
 }
 
+const CHUNK_EMPTY = (new Uint8Array(0)).buffer;
+
+function shadersChunk(ctx: IContext): ArrayBuffer {
+    const { pipeline } = ctx;
+    const shaders = pipeline.shaders();
+
+    if (shaders.length === 0) {
+        return CHUNK_EMPTY;
+    }
+
+    const byteLength =
+    4/* shaders.length */ +
+    shaders.map(({ shader: sh }) =>
+        sh.name.length +
+        sh.ver.length +
+        4 + /* sizeof(name.length) */
+        4 + /* sizeof(ver.length) */
+        4 + /* args.length */
+        sh.args.map(arg => 
+            4 + /* sizeof(arg.type) */
+            arg.type.length + 
+            4   /* constant value (number or bool) */
+        ).reduce((prev, curr) => prev + curr, 0)
+    ).reduce((prev, curr) => prev + curr, 0);
+
+    const size = (byteLength + 4) >> 2;
+    const chunkHeader = [EChunkType.k_Shaders, size];
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+
+    const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+    let written = writeInt(u8data, 0, shaders.length);
+    for (let i = 0; i < shaders.length; ++i) {
+        const { name, ver, args } = shaders[i].shader;
+        written = writeString(u8data, written, name);
+        written = writeString(u8data, written, ver);
+        written = writeInt(u8data, written, args.length);
+        for (let j = 0; j < args.length; ++j) {
+            written = writeString(u8data, written, args[j].type);
+            switch (args[j].type) {
+                case 'int':
+                case 'uint':
+                case 'bool':
+                    written = writeInt(u8data, written, +args[j].value);
+                    break;
+                default:
+                    assert(false, `unsupported constant type "${args[j].type}"`);
+                    written = writeInt(u8data, written, 0);
+            }
+        }
+    }
+
+    return data.buffer;
+}
+
+// depth stencil state
+function dssChunk(ctx: IContext): ArrayBuffer {
+    const { pipeline } = ctx;
+    const depthStencilStates = pipeline.depthStencilStates();
+
+    if (depthStencilStates.length === 0) {
+        return CHUNK_EMPTY;
+    }
+
+
+    const byteLength =
+    4/* depthStencilStates.length */ +
+    depthStencilStates.map(dss =>
+        4 + // DepthEnable
+        4 + // DepthWriteMask
+        4 + // DepthFunc
+        4 + // StencilEnable
+        4 + // StencilReadMask
+        4 + // StencilWriteMask
+        4 * 4 + // BackFace
+        4 * 4   // FrontFace
+    ).reduce((prev, curr) => prev + curr, 0);
+
+    const size = (byteLength + 4) >> 2;
+    const chunkHeader = [EChunkType.k_DepthStencilStates, size];
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+
+    const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+    let written = writeInt(u8data, 0, depthStencilStates.length);
+    for (let i = 0; i < depthStencilStates.length; ++i) {
+        const dss = depthStencilStates[i];
+        written = writeInt(u8data, written, +dss.DepthEnable);
+        written = writeInt(u8data, written, +dss.DepthWriteMask);
+        written = writeInt(u8data, written, +dss.DepthFunc);
+        written = writeInt(u8data, written, +dss.StencilEnable);
+        written = writeInt(u8data, written, +dss.StencilReadMask);
+        written = writeInt(u8data, written, +dss.StencilWriteMask);
+
+        written = writeInt(u8data, written, +dss.FrontFace.StencilFailOp);
+        written = writeInt(u8data, written, +dss.FrontFace.StencilDepthFailOp);
+        written = writeInt(u8data, written, +dss.FrontFace.StencilPassOp);
+        written = writeInt(u8data, written, +dss.FrontFace.StencilFunc);
+
+        written = writeInt(u8data, written, +dss.BackFace.StencilFailOp);
+        written = writeInt(u8data, written, +dss.BackFace.StencilDepthFailOp);
+        written = writeInt(u8data, written, +dss.BackFace.StencilPassOp);
+        written = writeInt(u8data, written, +dss.BackFace.StencilFunc);
+    }
+
+    return data.buffer;
+}
+
 function binary(ctx: IContext): Uint8Array {
-    const chunks = [constLayoutChunk(ctx), constChunk(ctx), codeChunk(ctx), externsChunk(ctx)].map(ch => new Uint8Array(ch));
+    const chunks = [
+        constLayoutChunk(ctx), 
+        constChunk(ctx), 
+        codeChunk(ctx), 
+        externsChunk(ctx),
+        shadersChunk(ctx),
+        dssChunk(ctx)
+    ].map(ch => new Uint8Array(ch));
     const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
     let data = new Uint8Array(byteLength);
     let offset = 0;
@@ -213,6 +330,7 @@ function binary(ctx: IContext): Uint8Array {
     });
     return data;
 }
+
 
 
 function translateProgram(ctx: IContext, fn: IFunctionDeclInstruction): ISubProgram {
@@ -267,6 +385,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         error,
         critical,
         constants,
+        pipeline,
         externs,
         uavs,
         srvs,
@@ -600,7 +719,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
         const isUniform = decl.type.isUniform();
         const isCbufferField = (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) != 0;
         const isConstant = decl.initExpr && decl.initExpr.isConst();
-        return decl.isGlobal() && (isUniform || isCbufferField || isConstant);
+        const isPipelineState = SystemScope.isPipelineState(decl.type);
+        
+        return decl.isGlobal() && (isUniform || isCbufferField || isConstant) && !isPipelineState;
     }
 
 
@@ -628,6 +749,11 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
             if (SystemScope.isTexture(decl.type)) {
                 return EAddrType.k_Input;
+            }
+
+            if (SystemScope.isPipelineState(decl.type)) {
+                // all states are presented as integers
+                return EAddrType.k_PipelineStates;
             }
 
             critical(decl.sourceNode, EErrors.k_AddressCannotBeResolved, {
@@ -1042,6 +1168,17 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                 const inputIndex = variable.parameterIndex(decl) + INPUT0_REGISTER;
                                 assert(variable.parameterIndex(decl) < INPUT_TOTAL);
                                 return addr.loc({ inputIndex, addr: src, size, type: addrType });
+                            }
+                        case EAddrType.k_PipelineStates:
+                            {
+                                // Resolve as registers (!)
+
+                                // deref:
+                                //  DepthStencilState
+                                //  RasterizerState
+                                //  BlendState
+                                const id = pipeline.deref(decl);
+                                return iconst_i32(id);
                             }
                     }
 
@@ -1555,19 +1692,21 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     const fdef = fdecl.def;
                     const retType = fdef.returnType;
 
+                    // todo: use more precise check
+                    // note: system functions also can present externs, for ex: SetVertexShader()
+                    if (fdecl.attrs.find(({ name }) => name === 'extern')) {
+                        debug.ns();
+                        const dest = iextern(call);
+                        debug.map(call);
+                        return dest;
+                    }
+
+
                     if (fdecl.instructionType === EInstructionTypes.k_SystemFunctionDecl) {
                         // breakpoint before intrinsic call
                         // TODO: is it's breakpoint really usefull?
                         debug.ns();
                         const dest = iintrinsic(call);
-                        debug.map(call);
-                        return dest;
-                    }
-
-                    // todo: use more precise check
-                    if (fdecl.attributes.find(({ name }) => name === 'extern')) {
-                        debug.ns();
-                        const dest = iextern(call);
                         debug.map(call);
                         return dest;
                     }
@@ -1765,6 +1904,15 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     }
                     console.warn(`Unknown constructor found: ${ctorCall.toCode()}`);
                     return PromisedAddress.INVALID;
+                }
+                break;
+                case EInstructionTypes.k_CompileShader11Expr:
+                {
+                    // see builtin.ts for details, all the types of shaders: 
+                    // VertexShader, PixelShader etc. are presented as integers. 
+                    const sh11 = expr as ICompileShader11Instruction;
+                    const id = pipeline.derefShader11(sh11);
+                    return iconst_i32(id);
                 }
                 break;
             default:

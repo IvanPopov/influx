@@ -549,7 +549,7 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
         return (
             <Property { ...this.bindProps(instr, false) } value={ instr.name } >
                 <PropertyOpt name='attributes'>
-                    { instr.attributes.map((attr) => this.Attribute(attr)) }
+                    { instr.attrs.map((attr) => this.Attribute(attr)) }
                 </PropertyOpt>
                 <Property name='definition' >
                     { this.FunctionDefinition(instr.def) }

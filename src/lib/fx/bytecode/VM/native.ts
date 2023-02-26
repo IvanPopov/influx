@@ -2,10 +2,12 @@ import { assert } from "@lib/common";
 import { f32Asi32, i32ToU8Array, u8ArrayAsF32, u8ArrayAsI32 } from "@lib/fx/bytecode/common";
 import { CDL } from "@lib/fx/bytecode/DebugLayout";
 import * as VM from '@lib/fx/bytecode/VM';
-import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
 import * as Bundle from "@lib/idl/bytecode";
 import { EInstructionTypes, ITypeInstruction } from "@lib/idl/IInstruction";
-import { IBCDocument } from "../Bytecode";
+import { IBCDocument } from "@lib/fx/bytecode/Bytecode";
+
+import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
+import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
 
 function asNativeVector<T>(elementDecoder: (u8: Uint8Array) => T, value: Uint8Array, length: number, stride = 4): T[] {
     const vector = [];

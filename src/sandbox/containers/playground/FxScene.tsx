@@ -337,7 +337,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             stride
         );
 
-        const attributes = instanceLayout.map(attr => {
+        const attrs = instanceLayout.map(attr => {
             return {
                 name: attr.name,
                 data: new THREE.InterleavedBufferAttribute(instancedBuffer, attr.size, attr.offset)
@@ -371,7 +371,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
         const meshes = this.createInstinceGeometry(desc.geometry).map(instanceGeometry => {
             const geometry = new THREE.InstancedBufferGeometry();
-            attributes.forEach(({ name, data }) => { geometry.setAttribute(name, data); });
+            attrs.forEach(({ name, data }) => { geometry.setAttribute(name, data); });
             // FIXME: do not use hardcoded layout
             const geometryFixedLayout = {
                 a_position0: instanceGeometry.attributes.position,

@@ -6,7 +6,7 @@
 import { cdlview } from '@lib/fx/bytecode';
 import { u32Asf32, u32Asi32 } from '@lib/fx/bytecode/common';
 import * as VM from '@lib/fx/bytecode/VM';
-import { EChunkType } from '@lib/idl/bytecode';
+import { EChunkType, IExtern } from '@lib/idl/bytecode';
 import { EOperation } from '@lib/idl/bytecode/EOperations';
 import DistinctColor from '@lib/util/DistinctColor';
 import { mapActions, sourceCode as sourceActions } from '@sandbox/actions';
@@ -15,7 +15,7 @@ import { getDebugger } from '@sandbox/reducers/sourceFile';
 import { IDebuggerState } from '@sandbox/store/IStoreState';
 import * as React from 'react';
 import { connect } from 'react-redux';
-import { Button, Icon, Table } from 'semantic-ui-react';
+import { Button, Icon, Popup, Table } from 'semantic-ui-react';
 
 // todo: don't use TS specific bundle helpers
 import { CBUFFER0_REGISTER, CBUFFER_TOTAL, SRV0_REGISTER, SRV_TOTAL, UAV0_REGISTER, UAV_TOTAL } from '@lib/fx/bytecode/Bytecode';
@@ -29,7 +29,9 @@ export interface IBytecodeViewProps extends IDebuggerState {
 
 export interface IBytecodeViewState {
     count: number;
+    ilist: Uint32Array;
     cdlView: ReturnType<typeof cdlview>;
+    externs: IExtern[]
 }
 
 
@@ -85,27 +87,34 @@ const scode = (c: EOperation) => {
     }
 };
 
-function JSNativeCall(a, b, c, d) {
-    console.log(`callback!`, a, b, c, d);
-    return 12;
-}
 
 class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewState>  {
 
     state: IBytecodeViewState = {
         count: 0,
-        cdlView: null
+        cdlView: null,
+        externs: null,
+        ilist: null
     };
 
-    static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState) {
+    static getDerivedStateFromProps(props: IBytecodeViewProps, state: IBytecodeViewState): IBytecodeViewState {
         const count = 0;
-        const cdlView = cdlview(props.bcDocument.program?.cdl);
+        const program = props.bcDocument.program;
 
-        return { count, cdlView };
+        if (!program) {
+            return { count, cdlView: null, externs: null, ilist: null };
+        }
+
+        const cdlView = cdlview(program.cdl);
+        const chunks = TSVM.decodeChunks(program.code);
+        const externs = TSVM.decodeExternsChunk(chunks[EChunkType.k_Externs]);
+        const ilist = TSVM.decodeCodeChunk(chunks[EChunkType.k_Code]);
+
+        return { count, cdlView, externs, ilist };
     }
 
     render() {
-        const { props } = this;
+        const { props, state } = this;
         const { program } = props.bcDocument;
 
         if (!isDefAndNotNull(program)) {
@@ -118,11 +127,6 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
             return null;
         }
 
-        const chunks = TSVM.decodeChunks(code);
-        const ilist = TSVM.decodeCodeChunk(chunks[EChunkType.k_Code]);
-        const externs = TSVM.decodeExternsChunk(chunks[EChunkType.k_Externs]);
-        
-
         return (
             // fixed
             <div>
@@ -132,7 +136,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                         overflowY: 'auto',
                         display: 'block'
                     } }>
-                        { this.renderOpList(ilist) }
+                        { this.renderOpList(state.ilist) }
                     </Table.Body>
                     { props.options.disableOptimizations &&
                         <Table.Footer>
@@ -152,14 +156,7 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                     if (!bundle) {
                         alert(`[ERROR] Could not evaluate bundle.`);
                         return;
-                    }
-
-                    const externs = bundle.getExterns();
-                    console.log(externs);
-                    const ex = externs.find(ex => ex.name === "JSNativeFunc");
-                    if (ex) {
-                        bundle.setExtern(ex.id, JSNativeCall);
-                    }            
+                    }     
 
                     // force bind shadow constant buffer 
                     bundle.setConstant("@", new Uint8Array()); // temp hack for CPP VM setup
@@ -394,18 +391,6 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
 
         sArgs = sArgs.map(any4);
 
-        // let htmlArgs: JSX.Element[] = [];
-        // const asSpan = (v: string) => (<span>&nbsp;{ v }&nbsp;</span>);
-
-        // switch (code) {
-        //     case EOperation.k_I32SetConst:
-        //         htmlArgs[0] = asSpan(sArgs[0]);
-        //         htmlArgs[1] = (<span style={ { color: 'gray' } }>&nbsp;{ sArgs[1] }&nbsp;</span>);
-        //         break;
-        //     default:
-        //         htmlArgs = sArgs.map(asSpan);
-        // }
-
         let specColor = null;
         if (this.props.options.colorize) {
             specColor = {
@@ -424,8 +409,22 @@ class BytecodeView extends React.Component<IBytecodeViewProps, IBytecodeViewStat
                 <Table.Cell style={ { padding: '0.2em 0.7em', width: '50px' } }>{ hex4(i) }</Table.Cell>
                 <Table.Cell style={ { padding: '0.2em 0.7em' } }>{ scode(code) }</Table.Cell>
                 <Table.Cell colSpan={ 2 } style={ { padding: '0.2em 0.7em' } }>
-                    {/* { htmlArgs } */}
-                    { sArgs.join(' ') }
+                    { (() => {
+                        if (code === EOperation.k_I32ExternCall) {
+                            return (
+                                <Popup 
+                                    content={ this.state.externs[args[0]].name } 
+                                    trigger={ 
+                                        <span style={ {borderBottom: '1px dotted gray'} } >
+                                            {sArgs.join(' ') + ' '}
+                                        </span> 
+                                    } 
+                                />
+                            );
+                        }
+                        return sArgs.join(' ');
+                        })() 
+                    }
                 </Table.Cell>
             </Table.Row>
         );

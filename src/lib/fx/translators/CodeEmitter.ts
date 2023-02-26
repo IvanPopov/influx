@@ -572,7 +572,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
         this.begin();
         {
-            this.emitAttributes(ctx, fn.attributes);
+            this.emitAttributes(ctx, fn.attrs);
             this.emitKeyword(typeName);
             this.emitKeyword(fn.name);
             this.emitChar('(');

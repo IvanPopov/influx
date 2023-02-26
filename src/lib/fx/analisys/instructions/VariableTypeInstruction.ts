@@ -1,6 +1,6 @@
-import { assert, isDefAndNotNull, isNull, isNumber } from "@lib/common";
-import { instruction, types } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IArithmeticExprInstruction, ICastExprInstruction, IExprInstruction, IFunctionDeclInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
+import { assert, isDefAndNotNull, isNull } from "@lib/common";
+import { expression, instruction, types } from "@lib/fx/analisys/helpers";
+import { EInstructionTypes, IExprInstruction, IFunctionDeclInstruction, ILiteralInstruction, IScope, ITypeInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IVariableUsage } from '@lib/idl/IInstruction';
 
 import { IInstructionSettings, Instruction } from "./Instruction";
 
@@ -12,47 +12,6 @@ export interface IVariableTypeInstructionSettings extends IInstructionSettings {
 
     readable?: boolean;
     writable?: boolean;
-}
-
-function evaluateValue(val: IInstruction) {
-    if (!val) return 0;
-    if (instruction.isLiteral(val)) return (<ILiteralInstruction<number>>val).value;
-    if (val.instructionType === EInstructionTypes.k_CastExpr) return evaluateConsExpr((<ICastExprInstruction>val).expr);
-    if (val.instructionType === EInstructionTypes.k_IdExpr) {
-        const idExpr = (<IIdExprInstruction>val);
-        if (idExpr.decl.isGlobal()) { // and is constant?
-            console.assert(idExpr.decl.initExpr.instructionType !== EInstructionTypes.k_InitExpr);
-            return evaluateConsExpr(idExpr.decl.initExpr);
-        }
-    }
-    return -1;
-}
-
-// simples possible evalator for minimal compartibility
-function evaluateConsExpr(expr: IExprInstruction): number
-{
-    const val = evaluateValue(expr);
-    if (val >= 0) return val;
-
-    if (expr.instructionType !== EInstructionTypes.k_ArithmeticExpr) return -1;
-    const { left, right, operator } = <IArithmeticExprInstruction>expr;
-    
-    let lval = evaluateConsExpr(left);
-    let rval = evaluateConsExpr(right);
-    
-    if (lval >= 0 && rval >= 0) {
-        switch (operator) {
-            // todo: use round ? check if integers only
-            case '*': return rval * lval;
-            case '/': return rval / lval;
-            case '+': return rval + lval;
-            case '-': return rval - lval;
-            default:
-                console.error('unsupported operator');
-        }
-    }
-
-    return -1;
 }
 
 export class VariableTypeInstruction extends Instruction implements IVariableTypeInstruction {
@@ -202,7 +161,7 @@ export class VariableTypeInstruction extends Instruction implements IVariableTyp
         }
 
         // arrays like float[N];
-        const len = evaluateConsExpr(expr);
+        const len = expression.evalConst(expr);
         return len < 0 ? instruction.UNDEFINE_LENGTH: len;
     }
 

@@ -3,13 +3,16 @@ import * as Timeline from '@lib/fx/timeline';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import React from 'react';
-import * as flatbuffers from 'flatbuffers';
-import { Bundle, BundleMetaT } from '@lib/idl/bundles/FxBundle_generated';
 import FxScene from '@sandbox/containers/playground/FxScene';
 import { IEmitter } from '@lib/idl/emitter';
 import MaterialScene from './playground/MaterialScene';
 import { ITechnique } from '@lib/idl/ITechnique';
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
+
+import * as flatbuffers from 'flatbuffers';
+import { BundleMetaT } from '@lib/idl/bundles/auto/fx/bundle-meta';
+import { Bundle } from '@lib/idl/bundles/auto/fx/bundle';
+
 
 const style: React.CSSProperties = {
     height: 'calc(100vh)',

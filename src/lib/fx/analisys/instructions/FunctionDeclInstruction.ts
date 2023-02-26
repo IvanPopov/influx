@@ -6,7 +6,7 @@ import { Instruction } from "./Instruction";
 export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettings {
     def: IFunctionDefInstruction;
     impl?: IStmtBlockInstruction;
-    attributes?: IAttributeInstruction[];
+    attrs?: IAttributeInstruction[];
 }
 
 
@@ -17,15 +17,15 @@ export interface IFunctionDeclInstructionSettings extends IDeclInstructionSettin
 export class FunctionDeclInstruction extends DeclInstruction implements IFunctionDeclInstruction {
     readonly def: IFunctionDefInstruction;
     readonly impl: IStmtBlockInstruction;
-    readonly attributes: IAttributeInstruction[];
+    readonly attrs: IAttributeInstruction[];
     
 
-    constructor({ def, impl = null, attributes = null, ...settings }: IFunctionDeclInstructionSettings) {
+    constructor({ def, impl = null, attrs = null, ...settings }: IFunctionDeclInstructionSettings) {
         super({ instrType: EInstructionTypes.k_FunctionDecl, ...settings });
 
         this.def = Instruction.$withParent(def, this);
         this.impl = Instruction.$withParent(impl, this);
-        this.attributes = (attributes || []).map(attr => Instruction.$withParent(attr, this));
+        this.attrs = (attrs || []).map(attr => Instruction.$withParent(attr, this));
     }
 
 

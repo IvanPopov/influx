@@ -1,15 +1,8 @@
 import { assert } from "@lib/common";
-import { TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
+import { IExtern } from "@lib/idl/bytecode";
 import { IFunctionDefInstruction } from "@lib/idl/IInstruction";
 import { typeAstToTypeLayout } from "./VM/native";
 
-export interface IExternReflection {
-    // type: 'fn';
-    id: number;
-    name: string;
-    params: TypeLayoutT[];
-    ret: TypeLayoutT;
-}
 
 export class Externs {
     funcs: IFunctionDefInstruction[] = [];
@@ -24,7 +17,7 @@ export class Externs {
         return id;
     }
 
-    dump(): IExternReflection[] {
+    dump(): IExtern[] {
         return this.funcs.map((fdef, id) => {
             const ret = typeAstToTypeLayout(fdef.returnType);
             const params = fdef.params.map(({ type }) => typeAstToTypeLayout(type));

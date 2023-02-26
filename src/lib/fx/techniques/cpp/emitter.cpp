@@ -307,9 +307,9 @@ void ScanConstanBuffers(std::map<std::string, CBUFFER>& sharedCbufs
 
             for (auto& fieldPtr : fields) 
             {
-                // Fx::TypeFieldT& field;
+                // TypeFieldT& field;
                 auto& [type, name, semantic, size, padding] = *fieldPtr;
-                // std::unique_ptr<Fx::TypeLayoutT> type;
+                // std::unique_ptr<TypeLayoutT> type;
                 CBUFFER_FIELD field;
                 field.name = name;
                 field.semantic = semantic.empty() ? semantic : name;
@@ -344,7 +344,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
 
     m_name = name;
     m_capacity = capacity;
-    m_particle = Fx::TypeLayoutT(*particle); // create new copy of type layout
+    m_particle = TypeLayoutT(*particle); // create new copy of type layout
     
     auto& sharedUAVs = m_sharedUAVs;
     m_resetBundle = SetupFxRoutineBytecodeBundle(
@@ -435,7 +435,7 @@ void IFX::EMITTER::ReloadBundles(void* buf)
             desc.sorting = sorting;
             desc.stride = stride;
             desc.instanceCount = instanceCount;
-            desc.renderInstance = Fx::TypeLayoutT(*instance);
+            desc.renderInstance = TypeLayoutT(*instance);
             desc.cbuffers = std::move(cbuffers);
 
             for (auto& attr : attrs)
@@ -590,15 +590,15 @@ void EMITTER::SetTexture(const std::string& name, const TEXTURE_RESOURCE* pTex)
 // hack to allow hot reload for similar emitters
 //
 
-bool CompareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs);
-bool CompareTypeField(const Fx::TypeFieldT& lhs, const Fx::TypeFieldT& rhs)
+bool CompareTypeLayout(const TypeLayoutT& lhs, const TypeLayoutT& rhs);
+bool CompareTypeField(const TypeFieldT& lhs, const TypeFieldT& rhs)
 {
     if (lhs.name != rhs.name || lhs.padding != rhs.padding || lhs.size != rhs.size) 
         return false;
     return CompareTypeLayout(*lhs.type, *rhs.type);
 }
 
-bool CompareTypeLayout(const Fx::TypeLayoutT& lhs, const Fx::TypeLayoutT& rhs)
+bool CompareTypeLayout(const TypeLayoutT& lhs, const TypeLayoutT& rhs)
 {
     if (lhs.name != rhs.name || lhs.length != rhs.length || lhs.size != rhs.size) 
         return false;

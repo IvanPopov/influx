@@ -1,12 +1,13 @@
-import { assert, isString } from "@lib/common";
-import * as Bytecode from '@lib/fx/bytecode/Bytecode';
+import { isString } from "@lib/common";
+import * as Bytecode from "@lib/fx/bytecode/Bytecode";
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
+import * as TSVM from "@lib/fx/bytecode/VM/ts/bundle";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
 import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { BufferBundleT, BundleContent, BundleMetaT, BundleSignatureT, BundleT, CBBundleT, EPartSimRoutines, GLSLAttributeT, MatBundleT, MatRenderPassT, PartBundleT, PartRenderPassT, Pass11BytecodeBundleT, PresetEntryT, PresetT, RenderStateT, RoutineBundle, RoutineBytecodeBundleResourcesT, RoutineBytecodeBundleT, RoutineGLSLSourceBundleT, RoutineHLSLSourceBundleT, RoutineShaderBundleT, RoutineSourceBundle, TextureBundleT, TrimeshBundleT, TypeFieldT, TypeLayoutT, UAVBundleT, UIControlT, ViewTypePropertyT } from "@lib/idl/bundles/FxBundle_generated";
-import { EInstructionTypes, IPass11Instruction, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
+import { EChunkType } from "@lib/idl/bytecode";
+import { EInstructionTypes, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { ITextDocument } from "@lib/idl/ITextDocument";
@@ -14,10 +15,45 @@ import { IncludeResolver } from "@lib/idl/parser/IParser";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { IKnownDefine } from "@lib/parser/Preprocessor";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import * as flatbuffers from 'flatbuffers';
-import { createSLASTDocument } from "../SLASTDocument";
-import { CodeConvolutionContext, CodeConvolutionEmitter, ICodeConvolutionContextOptions } from "../translators/CodeConvolutionEmitter";
+import { isDef } from "@lib/util/s3d/type";
+import { createSLASTDocument } from "@lib/fx/SLASTDocument";
+import { CodeConvolutionContext, CodeConvolutionEmitter, ICodeConvolutionContextOptions } from "@lib/fx/translators/CodeConvolutionEmitter";
 import { encodeControlValue, encodePropertyValue, getFBControlType, getFBPropertyType } from "./utils";
+
+import { CBBundleT } from "@lib/idl/bundles/auto/cbbundle";
+import { BufferBundleT } from "@lib/idl/bundles/auto/fx/buffer-bundle";
+import { BundleT } from "@lib/idl/bundles/auto/fx/bundle";
+import { BundleContent } from "@lib/idl/bundles/auto/fx/bundle-content";
+import { BundleMetaT } from "@lib/idl/bundles/auto/fx/bundle-meta";
+import { BundleSignatureT } from "@lib/idl/bundles/auto/fx/bundle-signature";
+import { EPartSimRoutines } from "@lib/idl/bundles/auto/fx/epart-sim-routines";
+import { GLSLAttributeT } from "@lib/idl/bundles/auto/fx/glslattribute";
+import { MatBundleT } from "@lib/idl/bundles/auto/fx/mat-bundle";
+import { MatRenderPassT } from "@lib/idl/bundles/auto/fx/mat-render-pass";
+import { PartBundleT } from "@lib/idl/bundles/auto/fx/part-bundle";
+import { PartRenderPassT } from "@lib/idl/bundles/auto/fx/part-render-pass";
+import { PresetT } from "@lib/idl/bundles/auto/fx/preset";
+import { PresetEntryT } from "@lib/idl/bundles/auto/fx/preset-entry";
+import { RenderStateT } from "@lib/idl/bundles/auto/fx/render-state";
+import { RoutineBundle } from "@lib/idl/bundles/auto/fx/routine-bundle";
+import { RoutineBytecodeBundleT } from "@lib/idl/bundles/auto/fx/routine-bytecode-bundle";
+import { RoutineBytecodeBundleResourcesT } from "@lib/idl/bundles/auto/fx/routine-bytecode-bundle-resources";
+import { RoutineGLSLSourceBundleT } from "@lib/idl/bundles/auto/fx/routine-glslsource-bundle";
+import { RoutineHLSLSourceBundleT } from "@lib/idl/bundles/auto/fx/routine-hlslsource-bundle";
+import { RoutineShaderBundleT } from "@lib/idl/bundles/auto/fx/routine-shader-bundle";
+import { RoutineSourceBundle } from "@lib/idl/bundles/auto/fx/routine-source-bundle";
+import { Technique11BundleT } from "@lib/idl/bundles/auto/fx/technique11bundle";
+import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11render-pass";
+import { TextureBundleT } from "@lib/idl/bundles/auto/fx/texture-bundle";
+import { TrimeshBundleT } from "@lib/idl/bundles/auto/fx/trimesh-bundle";
+import { UAVBundleT } from "@lib/idl/bundles/auto/fx/uavbundle";
+import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
+import { ViewTypePropertyT } from "@lib/idl/bundles/auto/fx/view-type-property";
+import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
+import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
+import * as flatbuffers from "flatbuffers";
+
+
 
 export const PACKED = true;
 
@@ -29,7 +65,7 @@ function getFxBundleSignature(): BundleSignatureT {
 }
 
 
-function createFxBundle(name: string, type: BundleContent, data: PartBundleT | MatBundleT, meta = new BundleMetaT, controls?: UIControlT[], presets?: PresetT[]): BundleT {
+function createFxBundle(name: string, type: BundleContent, data: PartBundleT | MatBundleT | Technique11BundleT, meta = new BundleMetaT, controls?: UIControlT[], presets?: PresetT[]): BundleT {
     const signature = getFxBundleSignature();
     return new BundleT(name, signature, meta, type, data, controls, presets);
 }
@@ -157,7 +193,7 @@ function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType:
     const partType = scope.findType(interpolatorsType);
     const instance = createFxTypeLayout(partType);
 
-    const attributesGLSL = instance.fields.map(field => {
+    const attrsGLSL = instance.fields.map(field => {
         let size = field.size >> 2;
         let offset = field.padding >> 2;
         let attrName = GLSLEmitter.$declToAttributeName(partType.getField(<string>field.name));
@@ -172,7 +208,7 @@ function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType:
         return new CBBundleT(name, register, size, fields);
     });
 
-    return new RoutineGLSLSourceBundleT(codeGLSL, attributesGLSL, cbuffers);
+    return new RoutineGLSLSourceBundleT(codeGLSL, attrsGLSL, cbuffers);
 }
 
 
@@ -387,10 +423,10 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
     return finalizeBundle(bundle, opts);
 }
 
-import * as TSVM from '@lib/fx/bytecode/VM/ts/bundle';
+
 async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
 
-    for (const pass11 of tech.passes) {
+    const passes = tech.passes.map((pass11): Technique11RenderPassT => {
         // const passBundle = createFxPass11BytecodeBundle(pass11);
         // const shaders = decodeShaders(passBundle);
         // const depthStencilStates = decodeDepthStencilStates(passBundle);
@@ -398,20 +434,27 @@ async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOp
         const { program } = Bytecode.translate(pass11);
         const { code, cdl } = program;
         const chunks = TSVM.decodeChunks(code);
-        console.log(chunks);
-    }
+        const shaders = chunks[EChunkType.k_Shaders];
+        if (isDef(shaders)) {
+            console.log(TSVM.decodeShadersChunk(shaders));
+        }
+
+        const dsStates = chunks[EChunkType.k_DepthStencilStates];
+        if (isDef(dsStates)) {
+            console.log(TSVM.decodeDepthStencilStates(dsStates));
+        }
+        return null;
+    });
 
     ///////////////////////////////////
 
     const { name } = tech;
-
     opts.name ||= name;
 
-    const passes = [];
-    const mat = new MatBundleT(passes);
+    const tech11 = new Technique11BundleT(/*passes*/[]);
 
     const { meta } = opts;
-    const bundle = createFxBundle(opts.name, BundleContent.MatBundle, mat, new BundleMetaT(meta?.author, meta?.source));
+    const bundle = createFxBundle(opts.name, BundleContent.Technique11Bundle, tech11, new BundleMetaT(meta?.author, meta?.source));
 
     return finalizeBundle(bundle, opts);
 }

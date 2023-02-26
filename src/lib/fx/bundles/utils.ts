@@ -1,9 +1,23 @@
-import { isObject } from "@lib/common";
-import { Bundle, BundleT, ColorValueT, ControlValue, Float2ValueT, Float3ValueT, Float4ValueT, FloatValueT, IntValueT, PresetT, PropertyValue, StringValueT, UIControlT, UintValueT, TextureValueT, MeshValueT } from "@lib/idl/bundles/FxBundle_generated";
 import { IMap } from "@lib/idl/IMap";
 import { Color, ControlValues, IPlaygroundControl, IPlaygroundControlsState, IPlaygroundPreset, IPlaygroundPresetEntry, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
 import { assert } from "@lib/common";
+
 import * as flatbuffers from 'flatbuffers';
+import { UintValueT } from "@lib/idl/bundles/auto/fx/uint-value";
+import { IntValueT } from "@lib/idl/bundles/auto/fx/int-value";
+import { FloatValueT } from "@lib/idl/bundles/auto/fx/float-value";
+import { StringValueT } from "@lib/idl/bundles/auto/fx/string-value";
+import { Float2ValueT } from "@lib/idl/bundles/auto/fx/float2value";
+import { Float3ValueT } from "@lib/idl/bundles/auto/fx/float3value";
+import { Float4ValueT } from "@lib/idl/bundles/auto/fx/float4value";
+import { ControlValue } from "@lib/idl/bundles/auto/fx/control-value";
+import { PropertyValue } from "@lib/idl/bundles/auto/fx/property-value";
+import { ColorValueT } from "@lib/idl/bundles/auto/fx/color-value";
+import { TextureValueT } from "@lib/idl/bundles/auto/fx/texture-value";
+import { MeshValueT } from "@lib/idl/bundles/auto/fx/mesh-value";
+import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
+import { PresetT } from "@lib/idl/bundles/auto/fx/preset";
+import { Bundle, BundleT } from "@lib/idl/bundles/auto/fx/bundle";
 
 export type PropertyValueType = number | string;
 export type ControlValueType = boolean | number | Vector2 | Vector3 | Vector4 | Color | string;

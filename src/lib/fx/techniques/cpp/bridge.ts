@@ -1,9 +1,11 @@
 import { IEmitter, ITextureDesc, ITexture, ITrimeshDesc, ITrimesh } from '@lib/idl/emitter/IEmitter';
 import loadWASM from './module.cpp';
 import * as Bytecode from '@lib/idl/bytecode';
-import { Bundle, BundleContent, BundleT } from '@lib/idl/bundles/FxBundle_generated';
 import { ITechnique } from '@lib/idl/ITechnique';
+
 import * as flatbuffers from 'flatbuffers';
+import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
+import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
 
 interface WASMMemory extends Bytecode.IMemory {
     heap: number; // in bytes 

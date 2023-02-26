@@ -5,9 +5,16 @@ import { addSystemFunctions } from "./system/api";
 import { addSystemTypeBuiltin } from "./system/builtin";
 import { addSystemTypeMatrix } from "./system/matrix";
 import { addSystemTypeScalar } from "./system/scalar";
-import { isBoolBasedType, isFloatBasedType, isHalfBasedType, isIntBasedType, isMatrixType, isScalarType, isUintBasedType, isVectorType } from "./system/utils";
+import {
+    isBoolBasedType, isFloatBasedType, isHalfBasedType, isIntBasedType, isMatrixType, isScalarType, isUintBasedType,
+    isVectorType
+} from "./system/utils";
 import { addSystemTypeVector } from "./system/vector";
-export { isBase, isBoolBasedType, isBuffer, isFloatBasedType, isFloatType, isHalfBasedType, isIntBasedType, isIntegerType, isMatrixType, isSamplerState, isScalarType, isTexture, isUAV, isUintBasedType, isVectorType, resolveRegister } from './system/utils';
+export {
+    isBase, isBlendState, isBoolBasedType, isBuffer, isDepthStencilState, isFloatBasedType, isFloatType, isHalfBasedType,
+    isIntBasedType, isIntegerType, isMatrixType, isPipelineState, isRasterizerState, isSamplerState, isScalarType,
+    isTexture, isUAV, isUintBasedType, isVectorType, resolveRegister
+} from './system/utils';
 
 const scope = new Scope({ type: EScopeType.k_System });
 

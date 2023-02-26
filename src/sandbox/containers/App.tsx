@@ -2,13 +2,15 @@ import * as Autotests from '@lib/fx/autotests';
 /* tslint:disable:max-func-body-length */
 /* tslint:disable:typedef */
 /* tslint:disable:no-single-line-block-comment */
+import * as ScopeUtils from '@lib/fx/analisys/system/utils';
+import { SCOPE } from '@lib/fx/analisys/SystemScope';
 import * as Bytecode from '@lib/fx/bytecode';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { FxEmitter } from '@lib/fx/translators/FxEmitter';
 import { IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
-import { mapActions, playground as playgroundActions, sourceCode as sourceActions, depot as depotActions, nodes as nodesActions } from '@sandbox/actions';
+import { depot as depotActions, mapActions, nodes as nodesActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
 import ASTView from '@sandbox/components/ASTView';
 import CodeView from '@sandbox/components/CodeView';
 import FileListView from '@sandbox/components/FileListView';
@@ -28,13 +30,13 @@ import { filterTechniques } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IP4Info, IPlaygroundState } from '@sandbox/store/IStoreState';
-import * as ScopeUtils from '@lib/fx/analisys/helpers/system-scope';
 import autobind from 'autobind-decorator';
 import { routerActions } from 'connected-react-router';
 // global defines from webpack's config;
 /// <reference path="../webpack.d.ts" />
 import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
+import { packGraphToJSON } from '@sandbox/logic/nodesEx';
 import * as fs from 'fs'; // << todo: remove
 import * as path from 'path'; // << todo: remove
 import * as React from 'react';
@@ -42,8 +44,7 @@ import withStyles, { WithStylesProps } from 'react-jss';
 import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
-import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Label, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
-import { packGraphToJSON } from '@sandbox/logic/nodesEx';
+import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
 
 type UnknownIcon = any;
 
@@ -895,7 +896,7 @@ class App extends React.Component<IAppProps> {
                                                             : `technique11::pass`
                                                     )
                                                 }
-                                                value={$debugger.query}
+                                                value={$debugger.query || ''}
                                                 ref={this.expressionRef}
                                                 label={
                                                     <Dropdown defaultValue='expression'
@@ -1194,7 +1195,7 @@ class App extends React.Component<IAppProps> {
                 ),
                 render: () => (
                     <Tab.Pane key='system-scope' className={`${props.classes.containerMarginFix} ${props.classes.mainViewHeightHotfix}`}>
-                        <CodeView content={ScopeUtils.debugPrint()} />
+                        <CodeView content={ScopeUtils.debugPrint(SCOPE)} />
                     </Tab.Pane>
                 )
             },

@@ -1,13 +1,16 @@
 import { assert, isDef, isDefAndNotNull } from "@lib/common";
 import * as Bytecode from '@lib/fx/bytecode/Bytecode';
-import { CBUFFER0_REGISTER, SRV0_REGISTER, UAV0_REGISTER, SRV_TOTAL, UAV_TOTAL, CBUFFER_TOTAL } from "@lib/fx/bytecode/Bytecode";
-import { u8ArrayAsI32, u8ArrayToI32 } from "@lib/fx/bytecode/common";
+import { CBUFFER0_REGISTER, CBUFFER_TOTAL, SRV0_REGISTER, SRV_TOTAL, UAV0_REGISTER, UAV_TOTAL } from "@lib/fx/bytecode/Bytecode";
+import { u8ArrayToI32 } from "@lib/fx/bytecode/common";
 import InstructionList from "@lib/fx/bytecode/InstructionList";
+import sizeof from "@lib/fx/bytecode/sizeof";
+import { asNativeRaw, fromNativeRaw } from "@lib/fx/bytecode/VM/native";
 import * as Bundle from "@lib/idl/bytecode";
 import { IMap } from "@lib/idl/IMap";
-import sizeof from "@lib/fx/bytecode/sizeof";
-import { TypeFieldT, TypeLayoutT } from "@lib/idl/bundles/FxBundle_generated";
-import { asNativeRaw, fromNativeRaw } from "@lib/fx/bytecode/VM/native";
+
+import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
+import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
+
 
 let { EChunkType, EOperation } = Bundle;
 
@@ -52,8 +55,8 @@ export class TSBundle implements Bundle.IBundle
 {
     private instructions: Uint32Array;
     private inputs: Int32Array[];
-    private layout: Bundle.Constant[];
-    private externs: Bundle.Extern[];
+    private layout: Bundle.IConstant[];
+    private externs: Bundle.IExtern[];
     private ncalls: Function[];         // native calls
 
     private static $regs = new ArrayBuffer(512 * 16);
@@ -84,7 +87,7 @@ export class TSBundle implements Bundle.IBundle
         this.inputs = Array<Int32Array>(64).fill(null);
         this.inputs[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset, constants.length >> 2);
 
-        const undefFn = (extern: Bundle.Extern) => (a, b, c, d, e, f) => { 
+        const undefFn = (extern: Bundle.IExtern) => (a, b, c, d, e, f) => { 
             console.error(`[native call <${extern.name}> was not provided]`, [a, b, c, d, e, f].filter(x => isDef(x))); 
         };
 
@@ -404,7 +407,7 @@ export class TSBundle implements Bundle.IBundle
 
 
 
-    dispatch(numgroups: Bundle.Numgroups, numthreads: Bundle.Numthreads) {
+    dispatch(numgroups: Bundle.INumgroups, numthreads: Bundle.INumthreads) {
         const { x: nGroupX, y: nGroupY, z: nGroupZ } = numgroups;
         const { x: nThreadX, y: nThreadY, z: nThreadZ } = numthreads;
 
@@ -502,11 +505,11 @@ export class TSBundle implements Bundle.IBundle
         return true;
     }
 
-    getLayout(): Bundle.Constant[] {
+    getLayout(): Bundle.IConstant[] {
         return this.layout;
     }
 
-    getExterns(): Bundle.Extern[] {
+    getExterns(): Bundle.IExtern[] {
         return this.externs;
     }
 
@@ -594,12 +597,12 @@ export function decodeConstChunk(constChunk: Uint8Array): Uint8Array {
 
 
 // TODO: rewrite with cleaner code
-export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.Constant[] {
+export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.IConstant[] {
     let readed = 0;
     let count = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
     readed += 4;
 
-    let layout: Bundle.Constant[] = [];
+    let layout: Bundle.IConstant[] = [];
     for (let i = 0; i < count; ++i) {
         const nameLength = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
@@ -625,6 +628,119 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.Constant[] {
     }
     return layout;
 }
+
+export function decodeShadersChunk(shadersChunk: Uint8Array): Bundle.IShader[] {
+    let readed = 0;
+    let shadersCount = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+    readed += 4;
+
+    let shaders: Bundle.IShader[] = [];
+    for (let i = 0; i < shadersCount; ++i) {
+        const nameLength = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const name = String.fromCharCode(...shadersChunk.subarray(readed, readed + nameLength));
+        readed += nameLength;
+
+        const verLength = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const ver = String.fromCharCode(...shadersChunk.subarray(readed, readed + verLength));
+        readed += verLength;
+
+        const argsCount = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const args = [];
+        for (let j = 0; j < argsCount; ++j) {
+            const typeLength = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+            readed += 4;
+            const type = String.fromCharCode(...shadersChunk.subarray(readed, readed + typeLength));
+            readed += typeLength;
+
+            let value;
+            switch (type) {
+                case 'int':
+                case 'uint':
+                    value = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+                    readed += 4;
+                    break;
+                case 'bool':
+                    value = !!u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
+                    readed += 4;
+                    break;
+                default:
+                    assert(false, `unsupported constant type "${type}"`);
+            }
+
+            args.push({ type, value });
+        }
+
+        shaders.push({ name, ver, args })
+    }
+    return shaders;
+}
+
+
+export function decodeDepthStencilStates(dssChunk: Uint8Array): Bundle.IDepthStencilState[] {
+    let readed = 0;
+    let shadersCount = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+    readed += 4;
+
+    let states: Bundle.IDepthStencilState[] = [];
+    for (let i = 0; i < shadersCount; ++i) {
+        const DepthEnable = !!u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const DepthWriteMask = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const DepthFunc = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const StencilEnable = !!u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const StencilReadMask = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const StencilWriteMask = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+
+        const FrontFaceStencilFailOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const FrontFaceStencilDepthFailOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const FrontFaceStencilPassOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const FrontFaceStencilFunc = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+
+        const BackFaceStencilFailOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const BackFaceStencilDepthFailOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const BackFaceStencilPassOp = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const BackFaceStencilFunc = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+        readed += 4;
+
+        states.push({ 
+            DepthEnable,
+            DepthWriteMask,
+            DepthFunc,
+            StencilEnable,
+            StencilReadMask,
+            StencilWriteMask,
+            FrontFace: {
+                StencilFailOp: FrontFaceStencilFailOp,
+                StencilDepthFailOp: FrontFaceStencilDepthFailOp,
+                StencilPassOp: FrontFaceStencilPassOp,
+                StencilFunc: FrontFaceStencilFunc
+            },
+            BackFace: {
+                StencilFailOp: BackFaceStencilFailOp,
+                StencilDepthFailOp: BackFaceStencilDepthFailOp,
+                StencilPassOp: BackFaceStencilPassOp,
+                StencilFunc: BackFaceStencilFunc
+            },
+         });
+    }
+    return states;
+}
+
 
 function decodeTypeField(data: Uint8Array, field: TypeFieldT): number {
     let readed = 0;
@@ -675,12 +791,12 @@ function decodeTypeLayout(data: Uint8Array, layout: TypeLayoutT): number {
     return readed;
 }
 
-export function decodeExternsChunk(externsChunk: Uint8Array): Bundle.Extern[] {
+export function decodeExternsChunk(externsChunk: Uint8Array): Bundle.IExtern[] {
     let readed = 0;
     let externCount = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
     readed += 4;
 
-    let externs: Bundle.Extern[] = [];
+    let externs: Bundle.IExtern[] = [];
     for (let i = 0; i < externCount; ++i) {
         const id = u8ArrayToI32(externsChunk.subarray(readed, readed + 4));
         readed += 4;

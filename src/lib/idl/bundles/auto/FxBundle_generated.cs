@@ -100,6 +100,7 @@ public enum BundleContent : byte
   NONE = 0,
   PartBundle = 1,
   MatBundle = 2,
+  Technique11Bundle = 3,
 };
 
 public class BundleContentUnion {
@@ -116,12 +117,15 @@ public class BundleContentUnion {
   public static BundleContentUnion FromPartBundle(Fx.PartBundleT _partbundle) { return new BundleContentUnion{ Type = BundleContent.PartBundle, Value = _partbundle }; }
   public Fx.MatBundleT AsMatBundle() { return this.As<Fx.MatBundleT>(); }
   public static BundleContentUnion FromMatBundle(Fx.MatBundleT _matbundle) { return new BundleContentUnion{ Type = BundleContent.MatBundle, Value = _matbundle }; }
+  public Fx.Technique11BundleT AsTechnique11Bundle() { return this.As<Fx.Technique11BundleT>(); }
+  public static BundleContentUnion FromTechnique11Bundle(Fx.Technique11BundleT _technique11bundle) { return new BundleContentUnion{ Type = BundleContent.Technique11Bundle, Value = _technique11bundle }; }
 
   public static int Pack(FlatBuffers.FlatBufferBuilder builder, BundleContentUnion _o) {
     switch (_o.Type) {
       default: return 0;
       case BundleContent.PartBundle: return Fx.PartBundle.Pack(builder, _o.AsPartBundle()).Value;
       case BundleContent.MatBundle: return Fx.MatBundle.Pack(builder, _o.AsMatBundle()).Value;
+      case BundleContent.Technique11Bundle: return Fx.Technique11Bundle.Pack(builder, _o.AsTechnique11Bundle()).Value;
     }
   }
 }
@@ -175,6 +179,8 @@ public enum ControlValue : byte
   Float3Value = 5,
   Float4Value = 6,
   ColorValue = 7,
+  TextureValue = 8,
+  MeshValue = 9,
 };
 
 public class ControlValueUnion {
@@ -201,6 +207,10 @@ public class ControlValueUnion {
   public static ControlValueUnion FromFloat4Value(Fx.Float4ValueT _float4value) { return new ControlValueUnion{ Type = ControlValue.Float4Value, Value = _float4value }; }
   public Fx.ColorValueT AsColorValue() { return this.As<Fx.ColorValueT>(); }
   public static ControlValueUnion FromColorValue(Fx.ColorValueT _colorvalue) { return new ControlValueUnion{ Type = ControlValue.ColorValue, Value = _colorvalue }; }
+  public Fx.TextureValueT AsTextureValue() { return this.As<Fx.TextureValueT>(); }
+  public static ControlValueUnion FromTextureValue(Fx.TextureValueT _texturevalue) { return new ControlValueUnion{ Type = ControlValue.TextureValue, Value = _texturevalue }; }
+  public Fx.MeshValueT AsMeshValue() { return this.As<Fx.MeshValueT>(); }
+  public static ControlValueUnion FromMeshValue(Fx.MeshValueT _meshvalue) { return new ControlValueUnion{ Type = ControlValue.MeshValue, Value = _meshvalue }; }
 
   public static int Pack(FlatBuffers.FlatBufferBuilder builder, ControlValueUnion _o) {
     switch (_o.Type) {
@@ -212,6 +222,8 @@ public class ControlValueUnion {
       case ControlValue.Float3Value: return Fx.Float3Value.Pack(builder, _o.AsFloat3Value()).Value;
       case ControlValue.Float4Value: return Fx.Float4Value.Pack(builder, _o.AsFloat4Value()).Value;
       case ControlValue.ColorValue: return Fx.ColorValue.Pack(builder, _o.AsColorValue()).Value;
+      case ControlValue.TextureValue: return Fx.TextureValue.Pack(builder, _o.AsTextureValue()).Value;
+      case ControlValue.MeshValue: return Fx.MeshValue.Pack(builder, _o.AsMeshValue()).Value;
     }
   }
 }
@@ -405,197 +417,6 @@ public class BundleMetaT
   }
 }
 
-public struct TypeField : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static TypeField GetRootAsTypeField(ByteBuffer _bb) { return GetRootAsTypeField(_bb, new TypeField()); }
-  public static TypeField GetRootAsTypeField(ByteBuffer _bb, TypeField obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public TypeField __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public Fx.TypeLayout? Type { get { int o = __p.__offset(4); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
-  public string Name { get { int o = __p.__offset(6); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(6, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(6); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(6); }
-  public string Semantic { get { int o = __p.__offset(8); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetSemanticBytes() { return __p.__vector_as_span<byte>(8, 1); }
-#else
-  public ArraySegment<byte>? GetSemanticBytes() { return __p.__vector_as_arraysegment(8); }
-#endif
-  public byte[] GetSemanticArray() { return __p.__vector_as_array<byte>(8); }
-  public uint Size { get { int o = __p.__offset(10); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public uint Padding { get { int o = __p.__offset(12); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-
-  public static Offset<Fx.TypeField> CreateTypeField(FlatBufferBuilder builder,
-      Offset<Fx.TypeLayout> typeOffset = default(Offset<Fx.TypeLayout>),
-      StringOffset nameOffset = default(StringOffset),
-      StringOffset semanticOffset = default(StringOffset),
-      uint size = 0,
-      uint padding = 0) {
-    builder.StartTable(5);
-    TypeField.AddPadding(builder, padding);
-    TypeField.AddSize(builder, size);
-    TypeField.AddSemantic(builder, semanticOffset);
-    TypeField.AddName(builder, nameOffset);
-    TypeField.AddType(builder, typeOffset);
-    return TypeField.EndTypeField(builder);
-  }
-
-  public static void StartTypeField(FlatBufferBuilder builder) { builder.StartTable(5); }
-  public static void AddType(FlatBufferBuilder builder, Offset<Fx.TypeLayout> typeOffset) { builder.AddOffset(0, typeOffset.Value, 0); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(1, nameOffset.Value, 0); }
-  public static void AddSemantic(FlatBufferBuilder builder, StringOffset semanticOffset) { builder.AddOffset(2, semanticOffset.Value, 0); }
-  public static void AddSize(FlatBufferBuilder builder, uint size) { builder.AddUint(3, size, 0); }
-  public static void AddPadding(FlatBufferBuilder builder, uint padding) { builder.AddUint(4, padding, 0); }
-  public static Offset<Fx.TypeField> EndTypeField(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.TypeField>(o);
-  }
-  public TypeFieldT UnPack() {
-    var _o = new TypeFieldT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(TypeFieldT _o) {
-    _o.Type = this.Type.HasValue ? this.Type.Value.UnPack() : null;
-    _o.Name = this.Name;
-    _o.Semantic = this.Semantic;
-    _o.Size = this.Size;
-    _o.Padding = this.Padding;
-  }
-  public static Offset<Fx.TypeField> Pack(FlatBufferBuilder builder, TypeFieldT _o) {
-    if (_o == null) return default(Offset<Fx.TypeField>);
-    var _type = _o.Type == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Type);
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _semantic = _o.Semantic == null ? default(StringOffset) : builder.CreateString(_o.Semantic);
-    return CreateTypeField(
-      builder,
-      _type,
-      _name,
-      _semantic,
-      _o.Size,
-      _o.Padding);
-  }
-}
-
-public class TypeFieldT
-{
-  public Fx.TypeLayoutT Type { get; set; }
-  public string Name { get; set; }
-  public string Semantic { get; set; }
-  public uint Size { get; set; }
-  public uint Padding { get; set; }
-
-  public TypeFieldT() {
-    this.Type = null;
-    this.Name = null;
-    this.Semantic = null;
-    this.Size = 0;
-    this.Padding = 0;
-  }
-}
-
-public struct TypeLayout : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static TypeLayout GetRootAsTypeLayout(ByteBuffer _bb) { return GetRootAsTypeLayout(_bb, new TypeLayout()); }
-  public static TypeLayout GetRootAsTypeLayout(ByteBuffer _bb, TypeLayout obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public TypeLayout __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public Fx.TypeField? Fields(int j) { int o = __p.__offset(4); return o != 0 ? (Fx.TypeField?)(new Fx.TypeField()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
-  public int FieldsLength { get { int o = __p.__offset(4); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public int Length { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetInt(o + __p.bb_pos) : (int)0; } }
-  public string Name { get { int o = __p.__offset(8); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(8, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(8); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(8); }
-  public uint Size { get { int o = __p.__offset(10); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-
-  public static Offset<Fx.TypeLayout> CreateTypeLayout(FlatBufferBuilder builder,
-      VectorOffset fieldsOffset = default(VectorOffset),
-      int length = 0,
-      StringOffset nameOffset = default(StringOffset),
-      uint size = 0) {
-    builder.StartTable(4);
-    TypeLayout.AddSize(builder, size);
-    TypeLayout.AddName(builder, nameOffset);
-    TypeLayout.AddLength(builder, length);
-    TypeLayout.AddFields(builder, fieldsOffset);
-    return TypeLayout.EndTypeLayout(builder);
-  }
-
-  public static void StartTypeLayout(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddFields(FlatBufferBuilder builder, VectorOffset fieldsOffset) { builder.AddOffset(0, fieldsOffset.Value, 0); }
-  public static VectorOffset CreateFieldsVector(FlatBufferBuilder builder, Offset<Fx.TypeField>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, Offset<Fx.TypeField>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.TypeField>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.TypeField>>(dataPtr, sizeInBytes); return builder.EndVector(); }
-  public static void StartFieldsVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
-  public static void AddLength(FlatBufferBuilder builder, int length) { builder.AddInt(1, length, 0); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(2, nameOffset.Value, 0); }
-  public static void AddSize(FlatBufferBuilder builder, uint size) { builder.AddUint(3, size, 0); }
-  public static Offset<Fx.TypeLayout> EndTypeLayout(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.TypeLayout>(o);
-  }
-  public TypeLayoutT UnPack() {
-    var _o = new TypeLayoutT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(TypeLayoutT _o) {
-    _o.Fields = new List<Fx.TypeFieldT>();
-    for (var _j = 0; _j < this.FieldsLength; ++_j) {_o.Fields.Add(this.Fields(_j).HasValue ? this.Fields(_j).Value.UnPack() : null);}
-    _o.Length = this.Length;
-    _o.Name = this.Name;
-    _o.Size = this.Size;
-  }
-  public static Offset<Fx.TypeLayout> Pack(FlatBufferBuilder builder, TypeLayoutT _o) {
-    if (_o == null) return default(Offset<Fx.TypeLayout>);
-    var _fields = default(VectorOffset);
-    if (_o.Fields != null) {
-      var __fields = new Offset<Fx.TypeField>[_o.Fields.Count];
-      for (var _j = 0; _j < __fields.Length; ++_j) { __fields[_j] = Fx.TypeField.Pack(builder, _o.Fields[_j]); }
-      _fields = CreateFieldsVector(builder, __fields);
-    }
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    return CreateTypeLayout(
-      builder,
-      _fields,
-      _o.Length,
-      _name,
-      _o.Size);
-  }
-}
-
-public class TypeLayoutT
-{
-  public List<Fx.TypeFieldT> Fields { get; set; }
-  public int Length { get; set; }
-  public string Name { get; set; }
-  public uint Size { get; set; }
-
-  public TypeLayoutT() {
-    this.Fields = null;
-    this.Length = 0;
-    this.Name = null;
-    this.Size = 0;
-  }
-}
-
 public struct UAVBundle : IFlatbufferObject
 {
   private Table __p;
@@ -615,13 +436,13 @@ public struct UAVBundle : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
   public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public Fx.TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
 
   public static Offset<Fx.UAVBundle> CreateUAVBundle(FlatBufferBuilder builder,
       StringOffset nameOffset = default(StringOffset),
       uint slot = 0,
       uint stride = 0,
-      Offset<Fx.TypeLayout> typeOffset = default(Offset<Fx.TypeLayout>)) {
+      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
     builder.StartTable(4);
     UAVBundle.AddType(builder, typeOffset);
     UAVBundle.AddStride(builder, stride);
@@ -634,7 +455,7 @@ public struct UAVBundle : IFlatbufferObject
   public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
   public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
   public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<Fx.TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
+  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
   public static Offset<Fx.UAVBundle> EndUAVBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.UAVBundle>(o);
@@ -653,7 +474,7 @@ public struct UAVBundle : IFlatbufferObject
   public static Offset<Fx.UAVBundle> Pack(FlatBufferBuilder builder, UAVBundleT _o) {
     if (_o == null) return default(Offset<Fx.UAVBundle>);
     var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Type);
+    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
     return CreateUAVBundle(
       builder,
       _name,
@@ -668,7 +489,7 @@ public class UAVBundleT
   public string Name { get; set; }
   public uint Slot { get; set; }
   public uint Stride { get; set; }
-  public Fx.TypeLayoutT Type { get; set; }
+  public TypeLayoutT Type { get; set; }
 
   public UAVBundleT() {
     this.Name = null;
@@ -697,13 +518,13 @@ public struct BufferBundle : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
   public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public Fx.TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
 
   public static Offset<Fx.BufferBundle> CreateBufferBundle(FlatBufferBuilder builder,
       StringOffset nameOffset = default(StringOffset),
       uint slot = 0,
       uint stride = 0,
-      Offset<Fx.TypeLayout> typeOffset = default(Offset<Fx.TypeLayout>)) {
+      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
     builder.StartTable(4);
     BufferBundle.AddType(builder, typeOffset);
     BufferBundle.AddStride(builder, stride);
@@ -716,7 +537,7 @@ public struct BufferBundle : IFlatbufferObject
   public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
   public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
   public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<Fx.TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
+  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
   public static Offset<Fx.BufferBundle> EndBufferBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.BufferBundle>(o);
@@ -735,7 +556,7 @@ public struct BufferBundle : IFlatbufferObject
   public static Offset<Fx.BufferBundle> Pack(FlatBufferBuilder builder, BufferBundleT _o) {
     if (_o == null) return default(Offset<Fx.BufferBundle>);
     var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Type);
+    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
     return CreateBufferBundle(
       builder,
       _name,
@@ -750,7 +571,7 @@ public class BufferBundleT
   public string Name { get; set; }
   public uint Slot { get; set; }
   public uint Stride { get; set; }
-  public Fx.TypeLayoutT Type { get; set; }
+  public TypeLayoutT Type { get; set; }
 
   public BufferBundleT() {
     this.Name = null;
@@ -779,13 +600,13 @@ public struct TextureBundle : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
   public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public Fx.TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
 
   public static Offset<Fx.TextureBundle> CreateTextureBundle(FlatBufferBuilder builder,
       StringOffset nameOffset = default(StringOffset),
       uint slot = 0,
       uint stride = 0,
-      Offset<Fx.TypeLayout> typeOffset = default(Offset<Fx.TypeLayout>)) {
+      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
     builder.StartTable(4);
     TextureBundle.AddType(builder, typeOffset);
     TextureBundle.AddStride(builder, stride);
@@ -798,7 +619,7 @@ public struct TextureBundle : IFlatbufferObject
   public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
   public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
   public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<Fx.TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
+  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
   public static Offset<Fx.TextureBundle> EndTextureBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.TextureBundle>(o);
@@ -817,7 +638,7 @@ public struct TextureBundle : IFlatbufferObject
   public static Offset<Fx.TextureBundle> Pack(FlatBufferBuilder builder, TextureBundleT _o) {
     if (_o == null) return default(Offset<Fx.TextureBundle>);
     var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Type);
+    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
     return CreateTextureBundle(
       builder,
       _name,
@@ -832,7 +653,7 @@ public class TextureBundleT
   public string Name { get; set; }
   public uint Slot { get; set; }
   public uint Stride { get; set; }
-  public Fx.TypeLayoutT Type { get; set; }
+  public TypeLayoutT Type { get; set; }
 
   public TextureBundleT() {
     this.Name = null;
@@ -887,20 +708,20 @@ public struct TrimeshBundle : IFlatbufferObject
   public ArraySegment<byte>? GetFacesNameBytes() { return __p.__vector_as_arraysegment(12); }
 #endif
   public byte[] GetFacesNameArray() { return __p.__vector_as_array<byte>(12); }
-  public string AdjacencyName { get { int o = __p.__offset(14); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public string GsAdjecencyName { get { int o = __p.__offset(14); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetAdjacencyNameBytes() { return __p.__vector_as_span<byte>(14, 1); }
+  public Span<byte> GetGsAdjecencyNameBytes() { return __p.__vector_as_span<byte>(14, 1); }
 #else
-  public ArraySegment<byte>? GetAdjacencyNameBytes() { return __p.__vector_as_arraysegment(14); }
+  public ArraySegment<byte>? GetGsAdjecencyNameBytes() { return __p.__vector_as_arraysegment(14); }
 #endif
-  public byte[] GetAdjacencyNameArray() { return __p.__vector_as_array<byte>(14); }
-  public string ResourcePath { get { int o = __p.__offset(16); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public byte[] GetGsAdjecencyNameArray() { return __p.__vector_as_array<byte>(14); }
+  public string FaceAdjacencyName { get { int o = __p.__offset(16); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetResourcePathBytes() { return __p.__vector_as_span<byte>(16, 1); }
+  public Span<byte> GetFaceAdjacencyNameBytes() { return __p.__vector_as_span<byte>(16, 1); }
 #else
-  public ArraySegment<byte>? GetResourcePathBytes() { return __p.__vector_as_arraysegment(16); }
+  public ArraySegment<byte>? GetFaceAdjacencyNameBytes() { return __p.__vector_as_arraysegment(16); }
 #endif
-  public byte[] GetResourcePathArray() { return __p.__vector_as_array<byte>(16); }
+  public byte[] GetFaceAdjacencyNameArray() { return __p.__vector_as_array<byte>(16); }
 
   public static Offset<Fx.TrimeshBundle> CreateTrimeshBundle(FlatBufferBuilder builder,
       StringOffset nameOffset = default(StringOffset),
@@ -908,11 +729,11 @@ public struct TrimeshBundle : IFlatbufferObject
       StringOffset faceCountUNameOffset = default(StringOffset),
       StringOffset verticesNameOffset = default(StringOffset),
       StringOffset facesNameOffset = default(StringOffset),
-      StringOffset adjacencyNameOffset = default(StringOffset),
-      StringOffset resourcePathOffset = default(StringOffset)) {
+      StringOffset gsAdjecencyNameOffset = default(StringOffset),
+      StringOffset faceAdjacencyNameOffset = default(StringOffset)) {
     builder.StartTable(7);
-    TrimeshBundle.AddResourcePath(builder, resourcePathOffset);
-    TrimeshBundle.AddAdjacencyName(builder, adjacencyNameOffset);
+    TrimeshBundle.AddFaceAdjacencyName(builder, faceAdjacencyNameOffset);
+    TrimeshBundle.AddGsAdjecencyName(builder, gsAdjecencyNameOffset);
     TrimeshBundle.AddFacesName(builder, facesNameOffset);
     TrimeshBundle.AddVerticesName(builder, verticesNameOffset);
     TrimeshBundle.AddFaceCountUName(builder, faceCountUNameOffset);
@@ -927,8 +748,8 @@ public struct TrimeshBundle : IFlatbufferObject
   public static void AddFaceCountUName(FlatBufferBuilder builder, StringOffset faceCountUNameOffset) { builder.AddOffset(2, faceCountUNameOffset.Value, 0); }
   public static void AddVerticesName(FlatBufferBuilder builder, StringOffset verticesNameOffset) { builder.AddOffset(3, verticesNameOffset.Value, 0); }
   public static void AddFacesName(FlatBufferBuilder builder, StringOffset facesNameOffset) { builder.AddOffset(4, facesNameOffset.Value, 0); }
-  public static void AddAdjacencyName(FlatBufferBuilder builder, StringOffset adjacencyNameOffset) { builder.AddOffset(5, adjacencyNameOffset.Value, 0); }
-  public static void AddResourcePath(FlatBufferBuilder builder, StringOffset resourcePathOffset) { builder.AddOffset(6, resourcePathOffset.Value, 0); }
+  public static void AddGsAdjecencyName(FlatBufferBuilder builder, StringOffset gsAdjecencyNameOffset) { builder.AddOffset(5, gsAdjecencyNameOffset.Value, 0); }
+  public static void AddFaceAdjacencyName(FlatBufferBuilder builder, StringOffset faceAdjacencyNameOffset) { builder.AddOffset(6, faceAdjacencyNameOffset.Value, 0); }
   public static Offset<Fx.TrimeshBundle> EndTrimeshBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.TrimeshBundle>(o);
@@ -944,8 +765,8 @@ public struct TrimeshBundle : IFlatbufferObject
     _o.FaceCountUName = this.FaceCountUName;
     _o.VerticesName = this.VerticesName;
     _o.FacesName = this.FacesName;
-    _o.AdjacencyName = this.AdjacencyName;
-    _o.ResourcePath = this.ResourcePath;
+    _o.GsAdjecencyName = this.GsAdjecencyName;
+    _o.FaceAdjacencyName = this.FaceAdjacencyName;
   }
   public static Offset<Fx.TrimeshBundle> Pack(FlatBufferBuilder builder, TrimeshBundleT _o) {
     if (_o == null) return default(Offset<Fx.TrimeshBundle>);
@@ -954,8 +775,8 @@ public struct TrimeshBundle : IFlatbufferObject
     var _faceCountUName = _o.FaceCountUName == null ? default(StringOffset) : builder.CreateString(_o.FaceCountUName);
     var _verticesName = _o.VerticesName == null ? default(StringOffset) : builder.CreateString(_o.VerticesName);
     var _facesName = _o.FacesName == null ? default(StringOffset) : builder.CreateString(_o.FacesName);
-    var _adjacencyName = _o.AdjacencyName == null ? default(StringOffset) : builder.CreateString(_o.AdjacencyName);
-    var _resourcePath = _o.ResourcePath == null ? default(StringOffset) : builder.CreateString(_o.ResourcePath);
+    var _gsAdjecencyName = _o.GsAdjecencyName == null ? default(StringOffset) : builder.CreateString(_o.GsAdjecencyName);
+    var _faceAdjacencyName = _o.FaceAdjacencyName == null ? default(StringOffset) : builder.CreateString(_o.FaceAdjacencyName);
     return CreateTrimeshBundle(
       builder,
       _name,
@@ -963,8 +784,8 @@ public struct TrimeshBundle : IFlatbufferObject
       _faceCountUName,
       _verticesName,
       _facesName,
-      _adjacencyName,
-      _resourcePath);
+      _gsAdjecencyName,
+      _faceAdjacencyName);
   }
 }
 
@@ -975,8 +796,8 @@ public class TrimeshBundleT
   public string FaceCountUName { get; set; }
   public string VerticesName { get; set; }
   public string FacesName { get; set; }
-  public string AdjacencyName { get; set; }
-  public string ResourcePath { get; set; }
+  public string GsAdjecencyName { get; set; }
+  public string FaceAdjacencyName { get; set; }
 
   public TrimeshBundleT() {
     this.Name = null;
@@ -984,102 +805,8 @@ public class TrimeshBundleT
     this.FaceCountUName = null;
     this.VerticesName = null;
     this.FacesName = null;
-    this.AdjacencyName = null;
-    this.ResourcePath = null;
-  }
-}
-
-public struct CBBundle : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static CBBundle GetRootAsCBBundle(ByteBuffer _bb) { return GetRootAsCBBundle(_bb, new CBBundle()); }
-  public static CBBundle GetRootAsCBBundle(ByteBuffer _bb, CBBundle obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public CBBundle __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public string Name { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(4, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(4); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
-  public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public uint Size { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public Fx.TypeField? Fields(int j) { int o = __p.__offset(10); return o != 0 ? (Fx.TypeField?)(new Fx.TypeField()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
-  public int FieldsLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
-
-  public static Offset<Fx.CBBundle> CreateCBBundle(FlatBufferBuilder builder,
-      StringOffset nameOffset = default(StringOffset),
-      uint slot = 0,
-      uint size = 0,
-      VectorOffset fieldsOffset = default(VectorOffset)) {
-    builder.StartTable(4);
-    CBBundle.AddFields(builder, fieldsOffset);
-    CBBundle.AddSize(builder, size);
-    CBBundle.AddSlot(builder, slot);
-    CBBundle.AddName(builder, nameOffset);
-    return CBBundle.EndCBBundle(builder);
-  }
-
-  public static void StartCBBundle(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
-  public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
-  public static void AddSize(FlatBufferBuilder builder, uint size) { builder.AddUint(2, size, 0); }
-  public static void AddFields(FlatBufferBuilder builder, VectorOffset fieldsOffset) { builder.AddOffset(3, fieldsOffset.Value, 0); }
-  public static VectorOffset CreateFieldsVector(FlatBufferBuilder builder, Offset<Fx.TypeField>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, Offset<Fx.TypeField>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.TypeField>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateFieldsVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.TypeField>>(dataPtr, sizeInBytes); return builder.EndVector(); }
-  public static void StartFieldsVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
-  public static Offset<Fx.CBBundle> EndCBBundle(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.CBBundle>(o);
-  }
-  public CBBundleT UnPack() {
-    var _o = new CBBundleT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(CBBundleT _o) {
-    _o.Name = this.Name;
-    _o.Slot = this.Slot;
-    _o.Size = this.Size;
-    _o.Fields = new List<Fx.TypeFieldT>();
-    for (var _j = 0; _j < this.FieldsLength; ++_j) {_o.Fields.Add(this.Fields(_j).HasValue ? this.Fields(_j).Value.UnPack() : null);}
-  }
-  public static Offset<Fx.CBBundle> Pack(FlatBufferBuilder builder, CBBundleT _o) {
-    if (_o == null) return default(Offset<Fx.CBBundle>);
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _fields = default(VectorOffset);
-    if (_o.Fields != null) {
-      var __fields = new Offset<Fx.TypeField>[_o.Fields.Count];
-      for (var _j = 0; _j < __fields.Length; ++_j) { __fields[_j] = Fx.TypeField.Pack(builder, _o.Fields[_j]); }
-      _fields = CreateFieldsVector(builder, __fields);
-    }
-    return CreateCBBundle(
-      builder,
-      _name,
-      _o.Slot,
-      _o.Size,
-      _fields);
-  }
-}
-
-public class CBBundleT
-{
-  public string Name { get; set; }
-  public uint Slot { get; set; }
-  public uint Size { get; set; }
-  public List<Fx.TypeFieldT> Fields { get; set; }
-
-  public CBBundleT() {
-    this.Name = null;
-    this.Slot = 0;
-    this.Size = 0;
-    this.Fields = null;
+    this.GsAdjecencyName = null;
+    this.FaceAdjacencyName = null;
   }
 }
 
@@ -1385,6 +1112,74 @@ public class RoutineBytecodeBundleT
   }
 }
 
+public struct Pass11BytecodeBundle : IFlatbufferObject
+{
+  private Table __p;
+  public ByteBuffer ByteBuffer { get { return __p.bb; } }
+  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
+  public static Pass11BytecodeBundle GetRootAsPass11BytecodeBundle(ByteBuffer _bb) { return GetRootAsPass11BytecodeBundle(_bb, new Pass11BytecodeBundle()); }
+  public static Pass11BytecodeBundle GetRootAsPass11BytecodeBundle(ByteBuffer _bb, Pass11BytecodeBundle obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
+  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
+  public Pass11BytecodeBundle __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+
+  public byte Code(int j) { int o = __p.__offset(4); return o != 0 ? __p.bb.Get(__p.__vector(o) + j * 1) : (byte)0; }
+  public int CodeLength { get { int o = __p.__offset(4); return o != 0 ? __p.__vector_len(o) : 0; } }
+#if ENABLE_SPAN_T
+  public Span<byte> GetCodeBytes() { return __p.__vector_as_span<byte>(4, 1); }
+#else
+  public ArraySegment<byte>? GetCodeBytes() { return __p.__vector_as_arraysegment(4); }
+#endif
+  public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(4); }
+
+  public static Offset<Fx.Pass11BytecodeBundle> CreatePass11BytecodeBundle(FlatBufferBuilder builder,
+      VectorOffset codeOffset = default(VectorOffset)) {
+    builder.StartTable(1);
+    Pass11BytecodeBundle.AddCode(builder, codeOffset);
+    return Pass11BytecodeBundle.EndPass11BytecodeBundle(builder);
+  }
+
+  public static void StartPass11BytecodeBundle(FlatBufferBuilder builder) { builder.StartTable(1); }
+  public static void AddCode(FlatBufferBuilder builder, VectorOffset codeOffset) { builder.AddOffset(0, codeOffset.Value, 0); }
+  public static VectorOffset CreateCodeVector(FlatBufferBuilder builder, byte[] data) { builder.StartVector(1, data.Length, 1); for (int i = data.Length - 1; i >= 0; i--) builder.AddByte(data[i]); return builder.EndVector(); }
+  public static VectorOffset CreateCodeVectorBlock(FlatBufferBuilder builder, byte[] data) { builder.StartVector(1, data.Length, 1); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCodeVectorBlock(FlatBufferBuilder builder, ArraySegment<byte> data) { builder.StartVector(1, data.Count, 1); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCodeVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<byte>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static void StartCodeVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(1, numElems, 1); }
+  public static Offset<Fx.Pass11BytecodeBundle> EndPass11BytecodeBundle(FlatBufferBuilder builder) {
+    int o = builder.EndTable();
+    return new Offset<Fx.Pass11BytecodeBundle>(o);
+  }
+  public Pass11BytecodeBundleT UnPack() {
+    var _o = new Pass11BytecodeBundleT();
+    this.UnPackTo(_o);
+    return _o;
+  }
+  public void UnPackTo(Pass11BytecodeBundleT _o) {
+    _o.Code = new List<byte>();
+    for (var _j = 0; _j < this.CodeLength; ++_j) {_o.Code.Add(this.Code(_j));}
+  }
+  public static Offset<Fx.Pass11BytecodeBundle> Pack(FlatBufferBuilder builder, Pass11BytecodeBundleT _o) {
+    if (_o == null) return default(Offset<Fx.Pass11BytecodeBundle>);
+    var _code = default(VectorOffset);
+    if (_o.Code != null) {
+      var __code = _o.Code.ToArray();
+      _code = CreateCodeVector(builder, __code);
+    }
+    return CreatePass11BytecodeBundle(
+      builder,
+      _code);
+  }
+}
+
+public class Pass11BytecodeBundleT
+{
+  public List<byte> Code { get; set; }
+
+  public Pass11BytecodeBundleT() {
+    this.Code = null;
+  }
+}
+
 public struct RoutineGLSLSourceBundle : IFlatbufferObject
 {
   private Table __p;
@@ -1404,7 +1199,7 @@ public struct RoutineGLSLSourceBundle : IFlatbufferObject
   public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(4); }
   public Fx.GLSLAttribute? Attributes(int j) { int o = __p.__offset(6); return o != 0 ? (Fx.GLSLAttribute?)(new Fx.GLSLAttribute()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int AttributesLength { get { int o = __p.__offset(6); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public Fx.CBBundle? Cbuffers(int j) { int o = __p.__offset(8); return o != 0 ? (Fx.CBBundle?)(new Fx.CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public CBBundle? Cbuffers(int j) { int o = __p.__offset(8); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int CbuffersLength { get { int o = __p.__offset(8); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.RoutineGLSLSourceBundle> CreateRoutineGLSLSourceBundle(FlatBufferBuilder builder,
@@ -1427,10 +1222,10 @@ public struct RoutineGLSLSourceBundle : IFlatbufferObject
   public static VectorOffset CreateAttributesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.GLSLAttribute>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartAttributesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(2, cbuffersOffset.Value, 0); }
-  public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<Fx.CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<Fx.CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartCbuffersVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static Offset<Fx.RoutineGLSLSourceBundle> EndRoutineGLSLSourceBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
@@ -1445,7 +1240,7 @@ public struct RoutineGLSLSourceBundle : IFlatbufferObject
     _o.Code = this.Code;
     _o.Attributes = new List<Fx.GLSLAttributeT>();
     for (var _j = 0; _j < this.AttributesLength; ++_j) {_o.Attributes.Add(this.Attributes(_j).HasValue ? this.Attributes(_j).Value.UnPack() : null);}
-    _o.Cbuffers = new List<Fx.CBBundleT>();
+    _o.Cbuffers = new List<CBBundleT>();
     for (var _j = 0; _j < this.CbuffersLength; ++_j) {_o.Cbuffers.Add(this.Cbuffers(_j).HasValue ? this.Cbuffers(_j).Value.UnPack() : null);}
   }
   public static Offset<Fx.RoutineGLSLSourceBundle> Pack(FlatBufferBuilder builder, RoutineGLSLSourceBundleT _o) {
@@ -1459,8 +1254,8 @@ public struct RoutineGLSLSourceBundle : IFlatbufferObject
     }
     var _cbuffers = default(VectorOffset);
     if (_o.Cbuffers != null) {
-      var __cbuffers = new Offset<Fx.CBBundle>[_o.Cbuffers.Count];
-      for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = Fx.CBBundle.Pack(builder, _o.Cbuffers[_j]); }
+      var __cbuffers = new Offset<CBBundle>[_o.Cbuffers.Count];
+      for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = CBBundle.Pack(builder, _o.Cbuffers[_j]); }
       _cbuffers = CreateCbuffersVector(builder, __cbuffers);
     }
     return CreateRoutineGLSLSourceBundle(
@@ -1475,7 +1270,7 @@ public class RoutineGLSLSourceBundleT
 {
   public string Code { get; set; }
   public List<Fx.GLSLAttributeT> Attributes { get; set; }
-  public List<Fx.CBBundleT> Cbuffers { get; set; }
+  public List<CBBundleT> Cbuffers { get; set; }
 
   public RoutineGLSLSourceBundleT() {
     this.Code = null;
@@ -1508,7 +1303,7 @@ public struct RoutineHLSLSourceBundle : IFlatbufferObject
   public ArraySegment<byte>? GetEntryNameBytes() { return __p.__vector_as_arraysegment(6); }
 #endif
   public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(6); }
-  public Fx.CBBundle? Cbuffers(int j) { int o = __p.__offset(8); return o != 0 ? (Fx.CBBundle?)(new Fx.CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public CBBundle? Cbuffers(int j) { int o = __p.__offset(8); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int CbuffersLength { get { int o = __p.__offset(8); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.RoutineHLSLSourceBundle> CreateRoutineHLSLSourceBundle(FlatBufferBuilder builder,
@@ -1526,10 +1321,10 @@ public struct RoutineHLSLSourceBundle : IFlatbufferObject
   public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(0, codeOffset.Value, 0); }
   public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(1, entryNameOffset.Value, 0); }
   public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(2, cbuffersOffset.Value, 0); }
-  public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<Fx.CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<Fx.CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartCbuffersVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static Offset<Fx.RoutineHLSLSourceBundle> EndRoutineHLSLSourceBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
@@ -1543,7 +1338,7 @@ public struct RoutineHLSLSourceBundle : IFlatbufferObject
   public void UnPackTo(RoutineHLSLSourceBundleT _o) {
     _o.Code = this.Code;
     _o.EntryName = this.EntryName;
-    _o.Cbuffers = new List<Fx.CBBundleT>();
+    _o.Cbuffers = new List<CBBundleT>();
     for (var _j = 0; _j < this.CbuffersLength; ++_j) {_o.Cbuffers.Add(this.Cbuffers(_j).HasValue ? this.Cbuffers(_j).Value.UnPack() : null);}
   }
   public static Offset<Fx.RoutineHLSLSourceBundle> Pack(FlatBufferBuilder builder, RoutineHLSLSourceBundleT _o) {
@@ -1552,8 +1347,8 @@ public struct RoutineHLSLSourceBundle : IFlatbufferObject
     var _entryName = _o.EntryName == null ? default(StringOffset) : builder.CreateString(_o.EntryName);
     var _cbuffers = default(VectorOffset);
     if (_o.Cbuffers != null) {
-      var __cbuffers = new Offset<Fx.CBBundle>[_o.Cbuffers.Count];
-      for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = Fx.CBBundle.Pack(builder, _o.Cbuffers[_j]); }
+      var __cbuffers = new Offset<CBBundle>[_o.Cbuffers.Count];
+      for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = CBBundle.Pack(builder, _o.Cbuffers[_j]); }
       _cbuffers = CreateCbuffersVector(builder, __cbuffers);
     }
     return CreateRoutineHLSLSourceBundle(
@@ -1568,7 +1363,7 @@ public class RoutineHLSLSourceBundleT
 {
   public string Code { get; set; }
   public string EntryName { get; set; }
-  public List<Fx.CBBundleT> Cbuffers { get; set; }
+  public List<CBBundleT> Cbuffers { get; set; }
 
   public RoutineHLSLSourceBundleT() {
     this.Code = null;
@@ -1706,7 +1501,9 @@ public struct PartRenderPass : IFlatbufferObject
   public bool Sorting { get { int o = __p.__offset(10); return o != 0 ? 0!=__p.bb.Get(o + __p.bb_pos) : (bool)false; } }
   public uint InstanceCount { get { int o = __p.__offset(12); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
   public uint Stride { get { int o = __p.__offset(14); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public Fx.TypeLayout? Instance { get { int o = __p.__offset(16); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Instance { get { int o = __p.__offset(16); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public Fx.RenderState? RenderStates(int j) { int o = __p.__offset(18); return o != 0 ? (Fx.RenderState?)(new Fx.RenderState()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public int RenderStatesLength { get { int o = __p.__offset(18); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.PartRenderPass> CreatePartRenderPass(FlatBufferBuilder builder,
       VectorOffset routines_typeOffset = default(VectorOffset),
@@ -1715,8 +1512,10 @@ public struct PartRenderPass : IFlatbufferObject
       bool sorting = false,
       uint instanceCount = 0,
       uint stride = 0,
-      Offset<Fx.TypeLayout> instanceOffset = default(Offset<Fx.TypeLayout>)) {
-    builder.StartTable(7);
+      Offset<TypeLayout> instanceOffset = default(Offset<TypeLayout>),
+      VectorOffset renderStatesOffset = default(VectorOffset)) {
+    builder.StartTable(8);
+    PartRenderPass.AddRenderStates(builder, renderStatesOffset);
     PartRenderPass.AddInstance(builder, instanceOffset);
     PartRenderPass.AddStride(builder, stride);
     PartRenderPass.AddInstanceCount(builder, instanceCount);
@@ -1727,7 +1526,7 @@ public struct PartRenderPass : IFlatbufferObject
     return PartRenderPass.EndPartRenderPass(builder);
   }
 
-  public static void StartPartRenderPass(FlatBufferBuilder builder) { builder.StartTable(7); }
+  public static void StartPartRenderPass(FlatBufferBuilder builder) { builder.StartTable(8); }
   public static void AddRoutinesType(FlatBufferBuilder builder, VectorOffset routinesTypeOffset) { builder.AddOffset(0, routinesTypeOffset.Value, 0); }
   public static VectorOffset CreateRoutinesTypeVector(FlatBufferBuilder builder, Fx.RoutineBundle[] data) { builder.StartVector(1, data.Length, 1); for (int i = data.Length - 1; i >= 0; i--) builder.AddByte((byte)data[i]); return builder.EndVector(); }
   public static VectorOffset CreateRoutinesTypeVectorBlock(FlatBufferBuilder builder, Fx.RoutineBundle[] data) { builder.StartVector(1, data.Length, 1); builder.Add(data); return builder.EndVector(); }
@@ -1744,7 +1543,13 @@ public struct PartRenderPass : IFlatbufferObject
   public static void AddSorting(FlatBufferBuilder builder, bool sorting) { builder.AddBool(3, sorting, false); }
   public static void AddInstanceCount(FlatBufferBuilder builder, uint instanceCount) { builder.AddUint(4, instanceCount, 0); }
   public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(5, stride, 0); }
-  public static void AddInstance(FlatBufferBuilder builder, Offset<Fx.TypeLayout> instanceOffset) { builder.AddOffset(6, instanceOffset.Value, 0); }
+  public static void AddInstance(FlatBufferBuilder builder, Offset<TypeLayout> instanceOffset) { builder.AddOffset(6, instanceOffset.Value, 0); }
+  public static void AddRenderStates(FlatBufferBuilder builder, VectorOffset renderStatesOffset) { builder.AddOffset(7, renderStatesOffset.Value, 0); }
+  public static VectorOffset CreateRenderStatesVector(FlatBufferBuilder builder, Offset<Fx.RenderState>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateRenderStatesVectorBlock(FlatBufferBuilder builder, Offset<Fx.RenderState>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateRenderStatesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.RenderState>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateRenderStatesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.RenderState>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static void StartRenderStatesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static Offset<Fx.PartRenderPass> EndPartRenderPass(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.PartRenderPass>(o);
@@ -1775,6 +1580,8 @@ public struct PartRenderPass : IFlatbufferObject
     _o.InstanceCount = this.InstanceCount;
     _o.Stride = this.Stride;
     _o.Instance = this.Instance.HasValue ? this.Instance.Value.UnPack() : null;
+    _o.RenderStates = new List<Fx.RenderStateT>();
+    for (var _j = 0; _j < this.RenderStatesLength; ++_j) {_o.RenderStates.Add(this.RenderStates(_j).HasValue ? this.RenderStates(_j).Value.UnPack() : null);}
   }
   public static Offset<Fx.PartRenderPass> Pack(FlatBufferBuilder builder, PartRenderPassT _o) {
     if (_o == null) return default(Offset<Fx.PartRenderPass>);
@@ -1791,7 +1598,13 @@ public struct PartRenderPass : IFlatbufferObject
       _routines = CreateRoutinesVector(builder, __routines);
     }
     var _geometry = _o.Geometry == null ? default(StringOffset) : builder.CreateString(_o.Geometry);
-    var _instance = _o.Instance == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Instance);
+    var _instance = _o.Instance == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Instance);
+    var _renderStates = default(VectorOffset);
+    if (_o.RenderStates != null) {
+      var __renderStates = new Offset<Fx.RenderState>[_o.RenderStates.Count];
+      for (var _j = 0; _j < __renderStates.Length; ++_j) { __renderStates[_j] = Fx.RenderState.Pack(builder, _o.RenderStates[_j]); }
+      _renderStates = CreateRenderStatesVector(builder, __renderStates);
+    }
     return CreatePartRenderPass(
       builder,
       _routines_type,
@@ -1800,7 +1613,8 @@ public struct PartRenderPass : IFlatbufferObject
       _o.Sorting,
       _o.InstanceCount,
       _o.Stride,
-      _instance);
+      _instance,
+      _renderStates);
   }
 }
 
@@ -1811,7 +1625,8 @@ public class PartRenderPassT
   public bool Sorting { get; set; }
   public uint InstanceCount { get; set; }
   public uint Stride { get; set; }
-  public Fx.TypeLayoutT Instance { get; set; }
+  public TypeLayoutT Instance { get; set; }
+  public List<Fx.RenderStateT> RenderStates { get; set; }
 
   public PartRenderPassT() {
     this.Routines = null;
@@ -1820,6 +1635,7 @@ public class PartRenderPassT
     this.InstanceCount = 0;
     this.Stride = 0;
     this.Instance = null;
+    this.RenderStates = null;
   }
 }
 
@@ -1846,14 +1662,14 @@ public struct PartBundle : IFlatbufferObject
   public int SimulationRoutinesLength { get { int o = __p.__offset(8); return o != 0 ? __p.__vector_len(o) : 0; } }
   public Fx.PartRenderPass? RenderPasses(int j) { int o = __p.__offset(10); return o != 0 ? (Fx.PartRenderPass?)(new Fx.PartRenderPass()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int RenderPassesLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public Fx.TypeLayout? Particle { get { int o = __p.__offset(12); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Particle { get { int o = __p.__offset(12); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
 
   public static Offset<Fx.PartBundle> CreatePartBundle(FlatBufferBuilder builder,
       uint capacity = 0,
       VectorOffset simulationRoutines_typeOffset = default(VectorOffset),
       VectorOffset simulationRoutinesOffset = default(VectorOffset),
       VectorOffset renderPassesOffset = default(VectorOffset),
-      Offset<Fx.TypeLayout> particleOffset = default(Offset<Fx.TypeLayout>)) {
+      Offset<TypeLayout> particleOffset = default(Offset<TypeLayout>)) {
     builder.StartTable(5);
     PartBundle.AddParticle(builder, particleOffset);
     PartBundle.AddRenderPasses(builder, renderPassesOffset);
@@ -1883,7 +1699,7 @@ public struct PartBundle : IFlatbufferObject
   public static VectorOffset CreateRenderPassesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.PartRenderPass>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateRenderPassesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.PartRenderPass>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartRenderPassesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
-  public static void AddParticle(FlatBufferBuilder builder, Offset<Fx.TypeLayout> particleOffset) { builder.AddOffset(4, particleOffset.Value, 0); }
+  public static void AddParticle(FlatBufferBuilder builder, Offset<TypeLayout> particleOffset) { builder.AddOffset(4, particleOffset.Value, 0); }
   public static Offset<Fx.PartBundle> EndPartBundle(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.PartBundle>(o);
@@ -1934,7 +1750,7 @@ public struct PartBundle : IFlatbufferObject
       for (var _j = 0; _j < __renderPasses.Length; ++_j) { __renderPasses[_j] = Fx.PartRenderPass.Pack(builder, _o.RenderPasses[_j]); }
       _renderPasses = CreateRenderPassesVector(builder, __renderPasses);
     }
-    var _particle = _o.Particle == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Particle);
+    var _particle = _o.Particle == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Particle);
     return CreatePartBundle(
       builder,
       _o.Capacity,
@@ -1950,7 +1766,7 @@ public class PartBundleT
   public uint Capacity { get; set; }
   public List<Fx.RoutineBundleUnion> SimulationRoutines { get; set; }
   public List<Fx.PartRenderPassT> RenderPasses { get; set; }
-  public Fx.TypeLayoutT Particle { get; set; }
+  public TypeLayoutT Particle { get; set; }
 
   public PartBundleT() {
     this.Capacity = 0;
@@ -2038,7 +1854,7 @@ public struct MatRenderPass : IFlatbufferObject
   public Fx.RoutineBundle[] GetRoutinesTypeArray() { int o = __p.__offset(4); if (o == 0) return null; int p = __p.__vector(o); int l = __p.__vector_len(o); Fx.RoutineBundle[] a = new Fx.RoutineBundle[l]; for (int i = 0; i < l; i++) { a[i] = (Fx.RoutineBundle)__p.bb.Get(p + i * 1); } return a; }
   public TTable? Routines<TTable>(int j) where TTable : struct, IFlatbufferObject { int o = __p.__offset(6); return o != 0 ? (TTable?)__p.__union<TTable>(__p.__vector(o) + j * 4) : null; }
   public int RoutinesLength { get { int o = __p.__offset(6); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public Fx.TypeLayout? Instance { get { int o = __p.__offset(8); return o != 0 ? (Fx.TypeLayout?)(new Fx.TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public TypeLayout? Instance { get { int o = __p.__offset(8); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
   public uint Stride { get { int o = __p.__offset(10); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
   public Fx.RenderState? RenderStates(int j) { int o = __p.__offset(12); return o != 0 ? (Fx.RenderState?)(new Fx.RenderState()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int RenderStatesLength { get { int o = __p.__offset(12); return o != 0 ? __p.__vector_len(o) : 0; } }
@@ -2046,7 +1862,7 @@ public struct MatRenderPass : IFlatbufferObject
   public static Offset<Fx.MatRenderPass> CreateMatRenderPass(FlatBufferBuilder builder,
       VectorOffset routines_typeOffset = default(VectorOffset),
       VectorOffset routinesOffset = default(VectorOffset),
-      Offset<Fx.TypeLayout> instanceOffset = default(Offset<Fx.TypeLayout>),
+      Offset<TypeLayout> instanceOffset = default(Offset<TypeLayout>),
       uint stride = 0,
       VectorOffset renderStatesOffset = default(VectorOffset)) {
     builder.StartTable(5);
@@ -2071,7 +1887,7 @@ public struct MatRenderPass : IFlatbufferObject
   public static VectorOffset CreateRoutinesVectorBlock(FlatBufferBuilder builder, ArraySegment<int> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateRoutinesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<int>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartRoutinesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
-  public static void AddInstance(FlatBufferBuilder builder, Offset<Fx.TypeLayout> instanceOffset) { builder.AddOffset(2, instanceOffset.Value, 0); }
+  public static void AddInstance(FlatBufferBuilder builder, Offset<TypeLayout> instanceOffset) { builder.AddOffset(2, instanceOffset.Value, 0); }
   public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(3, stride, 0); }
   public static void AddRenderStates(FlatBufferBuilder builder, VectorOffset renderStatesOffset) { builder.AddOffset(4, renderStatesOffset.Value, 0); }
   public static VectorOffset CreateRenderStatesVector(FlatBufferBuilder builder, Offset<Fx.RenderState>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
@@ -2123,7 +1939,7 @@ public struct MatRenderPass : IFlatbufferObject
       for (var _j = 0; _j < __routines.Length; ++_j) { __routines[_j] = Fx.RoutineBundleUnion.Pack(builder,  _o.Routines[_j]); }
       _routines = CreateRoutinesVector(builder, __routines);
     }
-    var _instance = _o.Instance == null ? default(Offset<Fx.TypeLayout>) : Fx.TypeLayout.Pack(builder, _o.Instance);
+    var _instance = _o.Instance == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Instance);
     var _renderStates = default(VectorOffset);
     if (_o.RenderStates != null) {
       var __renderStates = new Offset<Fx.RenderState>[_o.RenderStates.Count];
@@ -2143,7 +1959,7 @@ public struct MatRenderPass : IFlatbufferObject
 public class MatRenderPassT
 {
   public List<Fx.RoutineBundleUnion> Routines { get; set; }
-  public Fx.TypeLayoutT Instance { get; set; }
+  public TypeLayoutT Instance { get; set; }
   public uint Stride { get; set; }
   public List<Fx.RenderStateT> RenderStates { get; set; }
 
@@ -2271,6 +2087,120 @@ public class StringValueT
   public string Value { get; set; }
 
   public StringValueT() {
+    this.Value = null;
+  }
+}
+
+public struct TextureValue : IFlatbufferObject
+{
+  private Table __p;
+  public ByteBuffer ByteBuffer { get { return __p.bb; } }
+  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
+  public static TextureValue GetRootAsTextureValue(ByteBuffer _bb) { return GetRootAsTextureValue(_bb, new TextureValue()); }
+  public static TextureValue GetRootAsTextureValue(ByteBuffer _bb, TextureValue obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
+  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
+  public TextureValue __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+
+  public string Value { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+#if ENABLE_SPAN_T
+  public Span<byte> GetValueBytes() { return __p.__vector_as_span<byte>(4, 1); }
+#else
+  public ArraySegment<byte>? GetValueBytes() { return __p.__vector_as_arraysegment(4); }
+#endif
+  public byte[] GetValueArray() { return __p.__vector_as_array<byte>(4); }
+
+  public static Offset<Fx.TextureValue> CreateTextureValue(FlatBufferBuilder builder,
+      StringOffset valueOffset = default(StringOffset)) {
+    builder.StartTable(1);
+    TextureValue.AddValue(builder, valueOffset);
+    return TextureValue.EndTextureValue(builder);
+  }
+
+  public static void StartTextureValue(FlatBufferBuilder builder) { builder.StartTable(1); }
+  public static void AddValue(FlatBufferBuilder builder, StringOffset valueOffset) { builder.AddOffset(0, valueOffset.Value, 0); }
+  public static Offset<Fx.TextureValue> EndTextureValue(FlatBufferBuilder builder) {
+    int o = builder.EndTable();
+    return new Offset<Fx.TextureValue>(o);
+  }
+  public TextureValueT UnPack() {
+    var _o = new TextureValueT();
+    this.UnPackTo(_o);
+    return _o;
+  }
+  public void UnPackTo(TextureValueT _o) {
+    _o.Value = this.Value;
+  }
+  public static Offset<Fx.TextureValue> Pack(FlatBufferBuilder builder, TextureValueT _o) {
+    if (_o == null) return default(Offset<Fx.TextureValue>);
+    var _value = _o.Value == null ? default(StringOffset) : builder.CreateString(_o.Value);
+    return CreateTextureValue(
+      builder,
+      _value);
+  }
+}
+
+public class TextureValueT
+{
+  public string Value { get; set; }
+
+  public TextureValueT() {
+    this.Value = null;
+  }
+}
+
+public struct MeshValue : IFlatbufferObject
+{
+  private Table __p;
+  public ByteBuffer ByteBuffer { get { return __p.bb; } }
+  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
+  public static MeshValue GetRootAsMeshValue(ByteBuffer _bb) { return GetRootAsMeshValue(_bb, new MeshValue()); }
+  public static MeshValue GetRootAsMeshValue(ByteBuffer _bb, MeshValue obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
+  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
+  public MeshValue __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+
+  public string Value { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+#if ENABLE_SPAN_T
+  public Span<byte> GetValueBytes() { return __p.__vector_as_span<byte>(4, 1); }
+#else
+  public ArraySegment<byte>? GetValueBytes() { return __p.__vector_as_arraysegment(4); }
+#endif
+  public byte[] GetValueArray() { return __p.__vector_as_array<byte>(4); }
+
+  public static Offset<Fx.MeshValue> CreateMeshValue(FlatBufferBuilder builder,
+      StringOffset valueOffset = default(StringOffset)) {
+    builder.StartTable(1);
+    MeshValue.AddValue(builder, valueOffset);
+    return MeshValue.EndMeshValue(builder);
+  }
+
+  public static void StartMeshValue(FlatBufferBuilder builder) { builder.StartTable(1); }
+  public static void AddValue(FlatBufferBuilder builder, StringOffset valueOffset) { builder.AddOffset(0, valueOffset.Value, 0); }
+  public static Offset<Fx.MeshValue> EndMeshValue(FlatBufferBuilder builder) {
+    int o = builder.EndTable();
+    return new Offset<Fx.MeshValue>(o);
+  }
+  public MeshValueT UnPack() {
+    var _o = new MeshValueT();
+    this.UnPackTo(_o);
+    return _o;
+  }
+  public void UnPackTo(MeshValueT _o) {
+    _o.Value = this.Value;
+  }
+  public static Offset<Fx.MeshValue> Pack(FlatBufferBuilder builder, MeshValueT _o) {
+    if (_o == null) return default(Offset<Fx.MeshValue>);
+    var _value = _o.Value == null ? default(StringOffset) : builder.CreateString(_o.Value);
+    return CreateMeshValue(
+      builder,
+      _value);
+  }
+}
+
+public class MeshValueT
+{
+  public string Value { get; set; }
+
+  public MeshValueT() {
     this.Value = null;
   }
 }
@@ -2720,6 +2650,8 @@ public struct UIControl : IFlatbufferObject
   public Fx.Float3Value ValueAsFloat3Value() { return Value<Fx.Float3Value>().Value; }
   public Fx.Float4Value ValueAsFloat4Value() { return Value<Fx.Float4Value>().Value; }
   public Fx.ColorValue ValueAsColorValue() { return Value<Fx.ColorValue>().Value; }
+  public Fx.TextureValue ValueAsTextureValue() { return Value<Fx.TextureValue>().Value; }
+  public Fx.MeshValue ValueAsMeshValue() { return Value<Fx.MeshValue>().Value; }
   public Fx.ViewTypeProperty? Properties(int j) { int o = __p.__offset(10); return o != 0 ? (Fx.ViewTypeProperty?)(new Fx.ViewTypeProperty()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int PropertiesLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
 
@@ -2781,6 +2713,12 @@ public struct UIControl : IFlatbufferObject
         break;
       case Fx.ControlValue.ColorValue:
         _o.Value.Value = this.Value<Fx.ColorValue>().HasValue ? this.Value<Fx.ColorValue>().Value.UnPack() : null;
+        break;
+      case Fx.ControlValue.TextureValue:
+        _o.Value.Value = this.Value<Fx.TextureValue>().HasValue ? this.Value<Fx.TextureValue>().Value.UnPack() : null;
+        break;
+      case Fx.ControlValue.MeshValue:
+        _o.Value.Value = this.Value<Fx.MeshValue>().HasValue ? this.Value<Fx.MeshValue>().Value.UnPack() : null;
         break;
     }
     _o.Properties = new List<Fx.ViewTypePropertyT>();
@@ -2845,6 +2783,8 @@ public struct PresetEntry : IFlatbufferObject
   public Fx.Float3Value ValueAsFloat3Value() { return Value<Fx.Float3Value>().Value; }
   public Fx.Float4Value ValueAsFloat4Value() { return Value<Fx.Float4Value>().Value; }
   public Fx.ColorValue ValueAsColorValue() { return Value<Fx.ColorValue>().Value; }
+  public Fx.TextureValue ValueAsTextureValue() { return Value<Fx.TextureValue>().Value; }
+  public Fx.MeshValue ValueAsMeshValue() { return Value<Fx.MeshValue>().Value; }
 
   public static Offset<Fx.PresetEntry> CreatePresetEntry(FlatBufferBuilder builder,
       StringOffset nameOffset = default(StringOffset),
@@ -2896,6 +2836,12 @@ public struct PresetEntry : IFlatbufferObject
         break;
       case Fx.ControlValue.ColorValue:
         _o.Value.Value = this.Value<Fx.ColorValue>().HasValue ? this.Value<Fx.ColorValue>().Value.UnPack() : null;
+        break;
+      case Fx.ControlValue.TextureValue:
+        _o.Value.Value = this.Value<Fx.TextureValue>().HasValue ? this.Value<Fx.TextureValue>().Value.UnPack() : null;
+        break;
+      case Fx.ControlValue.MeshValue:
+        _o.Value.Value = this.Value<Fx.MeshValue>().HasValue ? this.Value<Fx.MeshValue>().Value.UnPack() : null;
         break;
     }
   }
@@ -3039,6 +2985,7 @@ public struct Bundle : IFlatbufferObject
   public TTable? Content<TTable>() where TTable : struct, IFlatbufferObject { int o = __p.__offset(12); return o != 0 ? (TTable?)__p.__union<TTable>(o + __p.bb_pos) : null; }
   public Fx.PartBundle ContentAsPartBundle() { return Content<Fx.PartBundle>().Value; }
   public Fx.MatBundle ContentAsMatBundle() { return Content<Fx.MatBundle>().Value; }
+  public Fx.Technique11Bundle ContentAsTechnique11Bundle() { return Content<Fx.Technique11Bundle>().Value; }
   public Fx.UIControl? Controls(int j) { int o = __p.__offset(14); return o != 0 ? (Fx.UIControl?)(new Fx.UIControl()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int ControlsLength { get { int o = __p.__offset(14); return o != 0 ? __p.__vector_len(o) : 0; } }
   public Fx.Preset? Presets(int j) { int o = __p.__offset(16); return o != 0 ? (Fx.Preset?)(new Fx.Preset()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
@@ -3105,6 +3052,9 @@ public struct Bundle : IFlatbufferObject
         break;
       case Fx.BundleContent.MatBundle:
         _o.Content.Value = this.Content<Fx.MatBundle>().HasValue ? this.Content<Fx.MatBundle>().Value.UnPack() : null;
+        break;
+      case Fx.BundleContent.Technique11Bundle:
+        _o.Content.Value = this.Content<Fx.Technique11Bundle>().HasValue ? this.Content<Fx.Technique11Bundle>().Value.UnPack() : null;
         break;
     }
     _o.Controls = new List<Fx.UIControlT>();

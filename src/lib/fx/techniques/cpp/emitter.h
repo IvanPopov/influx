@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#include "../../../idl/bundles/FxBundle_generated.h"
+#include "../../../idl/bundles/auto/FxBundle_generated.h"
 #include "../../bytecode/VM/cpp/memory_view.h"
 #include "../../bytecode/VM/cpp/bundle_uav.h"
 #include "../../bytecode/VM/cpp/bundle.h"
@@ -67,7 +67,7 @@ struct EMITTER_PASS_DESC
     std::string pixelShader;
     std::vector<SHADER_ATTR> instanceLayout;    // layout of one instance given from shader reflection            
 
-    Fx::TypeLayoutT renderInstance;    
+    TypeLayoutT renderInstance;    
 
     std::vector<CBUFFER> cbuffers;
 };
@@ -131,7 +131,7 @@ private:
 
     std::vector<VM::BUNDLE_UAV> m_sharedUAVs;
 
-    Fx::TypeLayoutT             m_particle;
+    TypeLayoutT             m_particle;
 
 private:
     VM::BUNDLE_UAV* Uav(const std::string& name);
