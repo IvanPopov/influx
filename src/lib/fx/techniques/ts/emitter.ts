@@ -5,10 +5,11 @@ import { FxTranslator } from '@lib/fx/translators/FxTranslator';
 import * as Bytecode from "@lib/idl/bytecode";
 import { IEmitter } from '@lib/idl/emitter';
 import { Uniforms } from '@lib/idl/Uniforms';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 import { SRV0_REGISTER } from '@lib/fx/bytecode/Bytecode';
 import { IParticleDebugViewer, ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
-import { EUsage, IConstantBuffer } from '@lib/idl/ITechnique';
+import { EUsage, IConstantBuffer } from '@lib/idl/ITechnique9';
 import { IMap } from '@lib/idl/IMap';
 
 import { UAVBundleT } from '@lib/idl/bundles/auto/fx/uavbundle';
@@ -437,7 +438,7 @@ function createEmiterFromBundle(bundle: BundleT, uavResources: IUAVResource[]): 
 
 
         function setTexture(name: string, tex: ITexture) {
-            bundle.setTexture(name, tex);
+            bundle?.setTexture(name, tex);
         }
 
 
@@ -596,7 +597,8 @@ function comparePartFxBundles(left: PartBundleT, right: PartBundleT): boolean {
     return true;
 }
 
-export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean {
+export function copyTsEmitter(dst: ITechnique, src: ITechnique): boolean {
+    assert(dst.getType() === 'emitter' && src.getType() === 'emitter');
     if (comparePartFxBundles((<TSEmitter>dst).bundle.content as PartBundleT, (<TSEmitter>src).bundle.content as PartBundleT)) {
         (<TSEmitter>dst).uavResources.forEach((uav, i) =>
             VM.memoryToU8Array(uav.buffer).set(VM.memoryToU8Array((<TSEmitter>src).uavResources[i].buffer)));
@@ -605,7 +607,9 @@ export function copyTsEmitter(dst: IEmitter, src: IEmitter): boolean {
     return false;
 }
 
-export function destroyTsEmitter(emitter: IEmitter): void {
+export function destroyTsEmitter(tech: ITechnique): void {
+    assert(tech.getType() === 'emitter');
+    let emitter = <IEmitter>tech;
     let { uavResources } = <TSEmitter>emitter;
     uavResources.forEach(uav => {
         VM.destroyUAV(uav);

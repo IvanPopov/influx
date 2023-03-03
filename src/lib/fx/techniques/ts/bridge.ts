@@ -1,17 +1,15 @@
-import { fromBundleMemory, asBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
+import { asBundleMemory, fromBundleMemory } from '@lib/fx/bytecode/VM/ts/bundle';
 import * as Bytecode from '@lib/idl/bytecode';
-import { IEmitter } from '@lib/idl/emitter';
 import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { ITechnique } from '@lib/idl/ITechnique';
-import { copyTsEmitter, createTsEmitter, destroyTsEmitter, createTsTexture, createTsTrimesh, destroyTsTexture, destroyTsTrimesh } from './emitter';
-import { copyTsMaterial, createTsMaterial, destroyTsMaterial } from './mat';
-
 import * as flatbuffers from 'flatbuffers';
+import { copyTsEmitter, createTsEmitter, createTsTexture, createTsTrimesh, destroyTsEmitter, destroyTsTexture, destroyTsTrimesh } from './emitter';
+import { copyTsMaterial, createTsMaterial, destroyTsMaterial } from './mat';
+import { copyTsTechnique11, createTsTechnique11, destroyTsTechnique11 } from './technique11';
+import { assert } from '@lib/common';
+
 import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
 import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
-
-const isEmitter = tech => tech?.getType() === 'emitter';
-const isMat = tech => tech?.getType() === 'material';
 
 
 function decodeBundleData(data: Uint8Array | BundleT): BundleT {
@@ -26,35 +24,6 @@ function decodeBundleData(data: Uint8Array | BundleT): BundleT {
     return <BundleT>data;
 }
 
-
-export function createTechnique(data: Uint8Array | BundleT): ITechnique {
-    const bundle = decodeBundleData(data);
-
-    if (bundle.contentType === BundleContent.PartBundle) {
-        const emitter = createTsEmitter(bundle);
-        emitter.reset();
-        return emitter;
-    }
-
-    if (bundle.contentType === BundleContent.MatBundle) {
-        const mat = createTsMaterial(bundle);
-        return mat;
-    }
-
-    return null;
-}
-
-
-export function destroyTechnique(tech: ITechnique): void {
-    if (isEmitter(tech)) {
-        destroyTsEmitter(<IEmitter>tech);
-        return;
-    }
-    if (isMat(tech)) {
-        destroyTsMaterial(tech);
-        return;
-    }
-}
 
 
 export function createTexture(desc: ITextureDesc, initData: ArrayBufferView): ITexture {
@@ -77,16 +46,52 @@ export function destroyTrimesh(mesh: ITrimesh) {
     destroyTsTrimesh(mesh);
 }
 
+//
+//
+//
+
+
+export function createTechnique(data: Uint8Array | BundleT): ITechnique {
+    const bundle = decodeBundleData(data);
+
+    if (bundle.contentType === BundleContent.PartBundle) {
+        const emitter = createTsEmitter(bundle);
+        emitter.reset();
+        return emitter;
+    }
+
+    if (bundle.contentType === BundleContent.MatBundle) {
+        return createTsMaterial(bundle);
+    }
+
+    if (bundle.contentType === BundleContent.Technique11Bundle) {
+        return createTsTechnique11(bundle);
+    }
+
+    return null;
+}
+
+
+export function destroyTechnique(tech: ITechnique): void {
+    switch (tech?.getType()) {
+        case 'emitter': return destroyTsEmitter(tech); // partFx
+        case 'material': return destroyTsMaterial(tech); // basically it's technique9
+        case 'technique11': return destroyTsTechnique11(tech);
+    }
+}
+
 
 export function copyTechnique(dst: ITechnique, src: ITechnique): boolean {
-    if (isEmitter(dst) && isEmitter(src)) {
-        return copyTsEmitter(<IEmitter>dst, <IEmitter>src);
+    assert(dst.getType() === src.getType());
+    switch (dst.getType()) {
+        case 'emitter': return copyTsEmitter(dst, src);         // partFx
+        case 'material': return copyTsMaterial(dst, src);       // basically it's technique9
+        case 'technique11': return copyTsTechnique11(dst, src);
     }
-    if (isMat(dst) && isMat(src)) {
-        return copyTsMaterial(<IEmitter>dst, <IEmitter>src);
-    }
+    console.assert(false);
     return false;
 }
+
 
 //
 //

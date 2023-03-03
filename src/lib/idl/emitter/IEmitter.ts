@@ -1,15 +1,16 @@
 import { IMemory } from '@lib/idl/bytecode';
-import { ITechnique, ITechniquePass, ITechniquePassDesc } from '@lib/idl/ITechnique';
+import { ITechnique9, ITechnique9PassDesc, ITechnique9RenderPass } from '@lib/idl/ITechnique9';
 import { Uniforms } from '@lib/idl/Uniforms';
 
 
-export interface IEmitterPassDesc extends ITechniquePassDesc
+export interface IEmitterPassDesc extends ITechnique9PassDesc
 {
     geometry: string;
     sorting: boolean;
 }
 
-export interface IEmitterPass extends ITechniquePass<IEmitterPassDesc> {
+export interface IEmitterPass extends ITechnique9RenderPass {
+    getDesc(): IEmitterPassDesc;
     getData(): IMemory;
     getNumRenderedParticles(): number;  // num alive particles multipled by the prerendered instance count
     serialize(): void;                  // fill render buffer with instance data, including sorting if needed
@@ -49,7 +50,7 @@ export interface IParticleDebugViewer {
     readParticlesJSON(): Array<Object>;
 }
 
-export interface IEmitter extends ITechnique<IEmitterPass> {
+export interface IEmitter extends ITechnique9<IEmitterPass> {
     getCapacity(): number;
     getNumParticles(): number;
     

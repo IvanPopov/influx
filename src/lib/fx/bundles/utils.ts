@@ -1,6 +1,11 @@
 import { IMap } from "@lib/idl/IMap";
 import { Color, ControlValues, IPlaygroundControl, IPlaygroundControlsState, IPlaygroundPreset, IPlaygroundPresetEntry, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
-import { assert } from "@lib/common";
+import { assert, isString } from "@lib/common";
+import { ICodeConvolutionContextOptions } from "@lib/fx/translators/CodeConvolutionEmitter";
+import { IKnownDefine } from "@lib/parser/Preprocessor";
+import { ITextDocument } from "@lib/idl/ITextDocument";
+import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
+import { IncludeResolver } from "@lib/idl/parser/IParser";
 
 import * as flatbuffers from 'flatbuffers';
 import { UintValueT } from "@lib/idl/bundles/auto/fx/uint-value";
@@ -288,4 +293,18 @@ export function uintToColor(src: number, dst: Color) {
     dst.r = ((src >> 16) & 0xff) / 255.0;
     dst.g = ((src >> 8) & 0xff) / 255.0;
     dst.b = ((src >> 0) & 0xff) / 255.0;
+}
+
+// -----------------------------------------------------------------------------------------
+
+export class ConvolutionPackEx implements ICodeConvolutionContextOptions {
+    defines?: IKnownDefine[];
+
+    constructor(
+        public textDocument?: ITextDocument,
+        public slastDocument?: ISLASTDocument,
+        public includeResolver?: IncludeResolver,
+        defines?: (string | IKnownDefine)[]) {
+        this.defines = defines?.map((name): IKnownDefine => isString(name) ? ({ name }) as IKnownDefine : name as IKnownDefine);
+    }
 }

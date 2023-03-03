@@ -81,7 +81,6 @@ export namespace expression {
             }
         }
         
-        console.error(`expr "${val.toCode()}" could not be evaluated`);
         return -1;
     }
 

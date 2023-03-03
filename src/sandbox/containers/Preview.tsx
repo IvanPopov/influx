@@ -5,8 +5,8 @@ import * as fs from 'fs';
 import React from 'react';
 import FxScene from '@sandbox/containers/playground/FxScene';
 import { IEmitter } from '@lib/idl/emitter';
-import MaterialScene from './playground/MaterialScene';
-import { ITechnique } from '@lib/idl/ITechnique';
+import Technique9Scene from './playground/Technique9Scene';
+import { ITechnique9 } from '@lib/idl/ITechnique9';
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
 
 import * as flatbuffers from 'flatbuffers';
@@ -58,7 +58,7 @@ class Preview extends React.Component<IProps> {
             return <FxScene style={style} emitter={tech as IEmitter} timeline={timeline} controls={controls} />
         else
             // todo: pass technique
-            return <MaterialScene style={style} material={tech as ITechnique} timeline={timeline} controls={controls} />
+            return <Technique9Scene style={style} material={tech as ITechnique9} timeline={timeline} controls={controls} />
     }
 }
 

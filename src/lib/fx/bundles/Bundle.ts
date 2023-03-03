@@ -1,24 +1,16 @@
-import { isString } from "@lib/common";
 import * as Bytecode from "@lib/fx/bytecode/Bytecode";
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
-import * as TSVM from "@lib/fx/bytecode/VM/ts/bundle";
+import { createSLASTDocument } from "@lib/fx/SLASTDocument";
 import { createSLDocument } from "@lib/fx/SLDocument";
 import { createTextDocument } from "@lib/fx/TextDocument";
+import { CodeConvolutionContext, CodeConvolutionEmitter } from "@lib/fx/translators/CodeConvolutionEmitter";
 import { FxTranslator, FxTranslatorContext, ICSShaderReflectionEx, IFxContextExOptions, IPartFxPassReflection, IPartFxReflection, IPassReflection, IPreset, IUIControl } from "@lib/fx/translators/FxTranslator";
 import { GLSLContext, GLSLEmitter } from "@lib/fx/translators/GlslEmitter";
-import { EChunkType } from "@lib/idl/bytecode";
-import { EInstructionTypes, ITechnique11Instruction, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
-import { ISLASTDocument } from "@lib/idl/ISLASTDocument";
+import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib/idl/IInstruction";
 import { ISLDocument } from "@lib/idl/ISLDocument";
-import { ITextDocument } from "@lib/idl/ITextDocument";
-import { IncludeResolver } from "@lib/idl/parser/IParser";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
-import { IKnownDefine } from "@lib/parser/Preprocessor";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { isDef } from "@lib/util/s3d/type";
-import { createSLASTDocument } from "@lib/fx/SLASTDocument";
-import { CodeConvolutionContext, CodeConvolutionEmitter, ICodeConvolutionContextOptions } from "@lib/fx/translators/CodeConvolutionEmitter";
-import { encodeControlValue, encodePropertyValue, getFBControlType, getFBPropertyType } from "./utils";
+import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, getFBControlType, getFBPropertyType } from "./utils";
 
 import { CBBundleT } from "@lib/idl/bundles/auto/cbbundle";
 import { BufferBundleT } from "@lib/idl/bundles/auto/fx/buffer-bundle";
@@ -43,7 +35,6 @@ import { RoutineHLSLSourceBundleT } from "@lib/idl/bundles/auto/fx/routine-hlsls
 import { RoutineShaderBundleT } from "@lib/idl/bundles/auto/fx/routine-shader-bundle";
 import { RoutineSourceBundle } from "@lib/idl/bundles/auto/fx/routine-source-bundle";
 import { Technique11BundleT } from "@lib/idl/bundles/auto/fx/technique11bundle";
-import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11render-pass";
 import { TextureBundleT } from "@lib/idl/bundles/auto/fx/texture-bundle";
 import { TrimeshBundleT } from "@lib/idl/bundles/auto/fx/trimesh-bundle";
 import { UAVBundleT } from "@lib/idl/bundles/auto/fx/uavbundle";
@@ -60,13 +51,13 @@ export const PACKED = true;
 
 // global defines from webpack's config;
 /// <reference path="../../webpack.d.ts" />
-function getFxBundleSignature(): BundleSignatureT {
+function createFxBundleSignature(): BundleSignatureT {
     return new BundleSignatureT(MODE, VERSION, COMMITHASH, BRANCH, TIMESTAMP);
 }
 
 
 function createFxBundle(name: string, type: BundleContent, data: PartBundleT | MatBundleT | Technique11BundleT, meta = new BundleMetaT, controls?: UIControlT[], presets?: PresetT[]): BundleT {
-    const signature = getFxBundleSignature();
+    const signature = createFxBundleSignature();
     return new BundleT(name, signature, meta, type, data, controls, presets);
 }
 
@@ -90,18 +81,6 @@ function createPartFxRenderPass(slDocument: ISLDocument, reflection: IPartFxPass
     return new PartRenderPassT(routineTypes, routines, geometry, sorting, instanceCount, stride, instance, renderStates);
 }
 
-
-export class ConvolutionPackEx implements ICodeConvolutionContextOptions {
-    defines?: IKnownDefine[];
-
-    constructor(
-        public textDocument?: ITextDocument,
-        public slastDocument?: ISLASTDocument,
-        public includeResolver?: IncludeResolver,
-        defines?: (string | IKnownDefine)[]) {
-        this.defines = defines?.map((name): IKnownDefine => isString(name) ? ({ name }) as IKnownDefine : name as IKnownDefine);
-    }
-}
 
 
 function createMatFxRenderPass(slDocument: ISLDocument, reflection: IPassReflection, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): MatRenderPassT {
@@ -200,7 +179,7 @@ function createFxRoutineVsGLSLBundle(slDocument: ISLDocument, interpolatorsType:
         return new GLSLAttributeT(size, offset, attrName);
     });
 
-    const ctx = new GLSLContext({ mode: 'vertex' });
+    const ctx = new GLSLContext({ mode: 'vs' });
     const codeGLSL = GLSLEmitter.translate(fn, ctx); // raw hlsl
 
     const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -220,7 +199,7 @@ function createFxRoutineVsHLSLBundle(slDocument: ISLDocument, entryName: string,
         return new RoutineHLSLSourceBundleT();
     }
     // set entry point name according with bundle name
-    const ctx = new CodeConvolutionContext({ textDocument, slastDocument, mode: 'vertex', entryName: name });
+    const ctx = new CodeConvolutionContext({ textDocument, slastDocument, mode: 'vs', entryName: name });
     const codeHLSL = CodeConvolutionEmitter.translate(fn, ctx); // raw hlsl
 
     const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -259,7 +238,7 @@ function createFxRoutinePsGLSLBundle(slDocument: ISLDocument, entryName: string,
     }
 
     // set entry point name according with bundle name
-    const ctx = new GLSLContext({ mode: 'pixel' });
+    const ctx = new GLSLContext({ mode: 'ps' });
     const codeGLSL = GLSLEmitter.translate(fn, ctx); // raw hlsl
 
     const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -280,7 +259,7 @@ function createFxRoutinePsHLSLBundle(slDocument: ISLDocument, entryName: string,
     }
 
     // set entry point name according with bundle name
-    const ctx = new CodeConvolutionContext({ textDocument, slastDocument, mode: 'pixel', entryName: name });
+    const ctx = new CodeConvolutionContext({ textDocument, slastDocument, mode: 'ps', entryName: name });
     const codeHLSL = CodeConvolutionEmitter.translate(fn, ctx); // raw hlsl
 
     const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -424,40 +403,6 @@ async function createPartFxBundle(fx: IPartFxInstruction, opts: BundleOptions = 
 }
 
 
-async function createMatFx11Bundle(tech: ITechnique11Instruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
-
-    const passes = tech.passes.map((pass11): Technique11RenderPassT => {
-        // const passBundle = createFxPass11BytecodeBundle(pass11);
-        // const shaders = decodeShaders(passBundle);
-        // const depthStencilStates = decodeDepthStencilStates(passBundle);
-        // const blendStates = decodeBlendStates(passBundle);
-        const { program } = Bytecode.translate(pass11);
-        const { code, cdl } = program;
-        const chunks = TSVM.decodeChunks(code);
-        const shaders = chunks[EChunkType.k_Shaders];
-        if (isDef(shaders)) {
-            console.log(TSVM.decodeShadersChunk(shaders));
-        }
-
-        const dsStates = chunks[EChunkType.k_DepthStencilStates];
-        if (isDef(dsStates)) {
-            console.log(TSVM.decodeDepthStencilStates(dsStates));
-        }
-        return null;
-    });
-
-    ///////////////////////////////////
-
-    const { name } = tech;
-    opts.name ||= name;
-
-    const tech11 = new Technique11BundleT(/*passes*/[]);
-
-    const { meta } = opts;
-    const bundle = createFxBundle(opts.name, BundleContent.Technique11Bundle, tech11, new BundleMetaT(meta?.author, meta?.source));
-
-    return finalizeBundle(bundle, opts);
-}
 
 /** @deprecated */
 async function createMatFxBundle(tech: ITechniqueInstruction, opts: BundleOptions = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
@@ -506,6 +451,3 @@ export async function createBundle(fx: ITechniqueInstruction, options?: BundleOp
 }
 
 
-export async function createBundle11(fx: ITechnique11Instruction, options?: BundleOptions, convPack?: ConvolutionPackEx): Promise<Uint8Array | BundleT> {
-    return createMatFx11Bundle(fx, options, convPack);
-}

@@ -1,6 +1,6 @@
 import { assert, isDef, isNull } from "@lib/common";
 import { instruction, variable, types } from "@lib/fx/analisys/helpers";
-import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
 import { fn } from "@lib/fx/analisys/helpers/fn";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
@@ -92,9 +92,10 @@ function pushUniq<T>(arr: Array<T>, elem: T) {
         arr.push(elem);
 }
 
+export type CodeContextMode = 'vs' | 'ps' | 'cs' | 'gs' | 'hs' | 'ds' | 'raw';
 
 export interface ICodeContextOptions {
-    mode?: 'vertex' | 'pixel' | 'compute' | 'raw';
+    mode?: CodeContextMode;
     // rename entry point
     entryName?: string;
 }
@@ -120,9 +121,9 @@ export class CodeContext {
     }
 
     get entryName(): string { return this.opts.entryName; }
-    get mode(): string { return this.opts.mode; }
-    isPixel() { return this.mode === 'pixel'; }
-    isVertex() { return this.mode === 'vertex'; }
+    get mode(): CodeContextMode { return this.opts.mode; }
+    isPixel() { return this.mode === 'ps'; }
+    isVertex() { return this.mode === 'vs'; }
     isRaw() { return this.mode === 'raw'; }
 
 
@@ -449,7 +450,13 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     emitVariable(ctx: ContextT, src: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string): void {
         this.emitVariableNoInit(ctx, src, rename);
         if (src.initExpr) {
-            this.emitKeyword('='), this.emitSpace(), this.emitExpression(ctx, src.initExpr);
+            // blocks are valid for blend/raster/depth state initialization.
+            const isBlock = src.initExpr.instructionType === EInstructionTypes.k_StateBlockExpr;
+            if (!isBlock) {
+                this.emitKeyword('=');
+                this.emitSpace();
+            }
+            this.emitExpression(ctx, src.initExpr);
         }
     }
 
@@ -725,6 +732,8 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 return this.emitBitwise(ctx, expr as IBitwiseExprInstruction);
             case EInstructionTypes.k_PostfixIndexExpr:
                 return this.emitPostfixIndex(ctx, expr as IPostfixIndexInstruction);
+            case EInstructionTypes.k_StateBlockExpr:
+                return this.emitStateBlockExpr(ctx, expr as IStateBlockInstruction);
             default:
                 this.emitLine(`/* ... unsupported expression '${expr.instructionName}' ... */`);
                 assert(false, `unsupported instruction found: ${expr.instructionName}`);
@@ -805,6 +814,16 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
         this.emitNoSpace();
         this.emitExpression(ctx, pfidx.index);
         this.emitChar(']');
+    }
+
+
+    emitStateBlockExpr(ctx: ContextT, stblk: IStateBlockInstruction) {
+        if (ctx.mode !== 'raw') {
+            // no need to emit state blocks in plain hlsl shaders
+            return;
+        }
+
+        assert('not implemented');
     }
 
 

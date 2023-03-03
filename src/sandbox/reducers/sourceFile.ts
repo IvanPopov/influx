@@ -1,5 +1,5 @@
 import { assert } from '@lib/common';
-import { ConvolutionPackEx } from '@lib/fx/bundles/Bundle';
+import { ConvolutionPackEx } from '@lib/fx/bundles/utils';
 import * as Bytecode from '@lib/fx/bytecode/VM';
 import * as Techniques from '@lib/fx/techniques';
 import { IScope } from '@lib/idl/IInstruction';

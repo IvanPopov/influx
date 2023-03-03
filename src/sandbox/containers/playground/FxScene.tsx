@@ -1,16 +1,8 @@
-/* tslint:disable:typedef */
-/* tslint:disable:forin */
-/* tslint:disable:no-for-in */
-/* tslint:disable:newline-per-chained-call */
-/* tslint:disable:number-literal-format */
-/* tslint:disable:no-string-literal */
-/* tslint:disable:insecure-random */
-
 import { assert, isDefAndNotNull, verbose } from '@lib/common';
 import * as React from 'react';
 import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
-import ThreeScene, { IDeps, IThreeSceneState, ITreeSceneProps, resolveExternalDependencies, TEXTURE_PLACEHOLDER_WHITE_1X1 } from './ThreeScene';
+import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 
 import { IEmitter, IEmitterPass } from '@lib/idl/emitter';
 
@@ -19,20 +11,29 @@ import { createSLDocument } from '@lib/fx/SLDocument';
 import * as Techniques from '@lib/fx/techniques';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import UniformHelper, { IUniformHelper } from '@lib/fx/UniformHelper';
-import { Color, IPlaygroundControl, IPlaygroundControlsState, Vector2, Vector3, Vector4 } from '@sandbox/store/IStoreState';
+import { Color, IPlaygroundControlsState, Vector2, Vector3, Vector4 } from '@sandbox/store/IStoreState';
 import * as GLSL from './shaders/fx';
 
 import { ControlValueType } from '@lib/fx/bundles/utils';
-import { ITexture, ITrimesh } from '@lib/idl/emitter/IEmitter';
-import { IMap } from '@lib/idl/IMap';
-import { Uniforms } from '@lib/idl/Uniforms';
-import '@sandbox/styles/custom/dat-gui.css';
-import { prepareTrimesh } from './utils/adjacency';
 import { ITimeline } from '@lib/fx/timeline';
+import { ITexture, ITrimesh } from '@lib/idl/emitter/IEmitter';
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
+import { IMap } from '@lib/idl/IMap';
+import { Uniforms } from '@lib/idl/Uniforms';
+import { prepareTrimesh } from './utils/adjacency';
+import { Deps, IDeps } from './utils/deps';
+import { GuiView } from './utils/gui';
+import { GroupedUniforms } from './utils/GroupedUniforms';
+import { SingleUniforms } from './utils/SingleUniforms';
+
+import '@sandbox/styles/custom/dat-gui.css';
+import HDRScene from './HDRScene';
+
+
 
 interface IFxSceneProps extends ITreeSceneProps {
+    controls?: IPlaygroundControlsState;
     emitter: IEmitter;
 }
 
@@ -125,6 +126,7 @@ function setUniformValue(helper: IUniformHelper, name: string, type: string, val
     }
 }
 
+// prerecord uniforms for bytecode bundle
 function prerecordUniforms(
     camera: THREE.PerspectiveCamera,
     timeline: ITimeline, 
@@ -176,7 +178,7 @@ class TriangleGeometry extends THREE.BufferGeometry {
 }
 
 
-class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
+class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
     private passes: {
         meshes: (THREE.Mesh | THREE.LineSegments)[];
         instancedBuffer: THREE.InstancedInterleavedBuffer | THREE.InterleavedBuffer;
@@ -192,8 +194,14 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     
     private helperGeom?: THREE.Object3D[] = [];
 
+    // bytecode resources
     private textures: IMap<ITexture>;
     private meshes: IMap<ITrimesh>;
+
+    protected gui = new GuiView;
+    protected uniformGroups: GroupedUniforms = new GroupedUniforms;
+    protected uniforms: SingleUniforms = new SingleUniforms;
+    protected deps = new Deps;
 
     constructor(props) {
         super(props);
@@ -210,8 +218,13 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
 
     componentDidMount() {
         super.componentDidMount();
-        this.createUniformGroups(this.props.emitter);
-        this.createSingleUniforms();
+
+        this.gui.mount(this.mount);
+        this.gui.create(this.props.controls);
+
+        this.uniformGroups.create9(this.props.emitter);
+        this.uniforms.create(this.props.controls, this.deps);
+
         this.createEmitter(this.props.emitter);
     }
 
@@ -226,7 +239,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     // this function is called because of ant state change
     // including part count
     componentDidUpdate(prevProps, prevState) {
-        super.componentDidUpdate(prevProps, prevState);
+        super.componentDidUpdate?.(prevProps, prevState);
 
         // loading still in process - nothing todo
         if (this.state.loading === this.props.emitter) {
@@ -299,7 +312,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             geometry.setAttribute(attr.name, interleavedAttr);
         });
 
-        const uniforms = this.uniforms;
+        const uniforms = this.uniforms.data();
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: desc.vertexShader,
@@ -311,7 +324,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         });
 
         
-        (material as any).uniformsGroups = this.uniformGroups[passId];
+        (material as any).uniformsGroups = this.uniformGroups.data()[passId];
 
 
         geometry.setDrawRange(0, pass.getNumRenderedParticles());
@@ -344,7 +357,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             };
         });
 
-        const uniforms = this.uniforms;
+        const uniforms = this.uniforms.data();
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: vertexShader,
@@ -367,7 +380,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             material.transparent = renderStates[ERenderStates.BLENDENABLE] === ERenderStateValues.TRUE;
         }
 
-        (material as any).uniformsGroups = this.uniformGroups[passId];
+        (material as any).uniformsGroups = this.uniformGroups.data()[passId];
 
         const meshes = this.createInstinceGeometry(desc.geometry).map(instanceGeometry => {
             const geometry = new THREE.InstancedBufferGeometry();
@@ -523,7 +536,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             side: THREE.DoubleSide
         });
 
-        (material as any).uniformsGroups = this.uniformGroups[passId];
+        (material as any).uniformsGroups = this.uniformGroups.data()[passId];
 
         const meshes = this.createInstinceGeometry(desc.geometry, "box").map(instanceGeometry => {
             const geometry = new THREE.InstancedBufferGeometry();
@@ -564,7 +577,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const color = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3);
         const size = new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7);
 
-        const uniforms = this.uniforms;
+        const uniforms = this.uniforms.data();
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: Shaders('defMatVS'),
@@ -574,7 +587,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             depthTest: false
         });
 
-        (material as any).uniformsGroups = this.uniformGroups[passId];
+        (material as any).uniformsGroups = this.uniformGroups.data()[passId];
 
         const meshes = this.createInstinceGeometry(desc.geometry).map(instanceGeometry => {
             const geometry = new THREE.InstancedBufferGeometry();
@@ -690,7 +703,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
         const doLoadTexture = true;//Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
         const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
 
-        resolveExternalDependencies(doLoadTexture, doLoadMeshes, this.deps, (deps: IDeps) => {
+        this.deps.resolve(doLoadTexture, doLoadMeshes, (deps: IDeps) => {
             this.createPasses(emitter);
         });
     }
@@ -769,7 +782,7 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
                 }
 
                 // temp solution until geom is not rendered from effect
-                if (this.meshDebugDraw[name]) {
+                if (this.gui.debugDraw()[name]) {
                     this.helperGeom.push(...source.map(obj => {
                         const mesh = obj.clone();
                         // mesh.material = new THREE.MeshBasicMaterial({ 
@@ -848,9 +861,9 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             const rendPass = this.passes[iPass];
             const emitPass = emitter.getPass(iPass);
             const passDesc = emitPass.getDesc();
-            
-            rendPass.instancedBuffer.needsUpdate = true;
-            rendPass.meshes.forEach(mesh => {
+            if (rendPass.instancedBuffer)
+                rendPass.instancedBuffer.needsUpdate = true;
+            rendPass.meshes?.forEach(mesh => {
                 const geometry = mesh.geometry as THREE.BufferGeometry;
                 if (passDesc.geometry === "line") {
                     geometry.setDrawRange(0, emitPass.getNumRenderedParticles());
@@ -863,20 +876,23 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
     }
 
 
-    protected beginFrame() {
+    protected override beginFrame() {
         const emitter = this.state.emitter;
         const timeline = this.props.timeline;
         const controls = this.props.controls;
+        const tech9 = this.props.emitter;
         const camera = this.camera;
-        const preset = this.preset;
+        const viewport = this.mount;
+        const deps = this.deps;
+        const preset = this.gui.preset();
 
         if (!emitter) {
             return;
         }
 
         // IP: including textures
-        this.updateUniformsGroups(this.props.emitter);
-        this.updateSingleUniforms();
+        this.uniformGroups.update9(camera, viewport, controls, timeline, deps, tech9);
+        this.uniforms.update(controls, timeline, deps);
 
         // dedicated way to setup bytecode bundle resource
         // todo: generalize with uniforms?
@@ -902,8 +918,10 @@ class FxScene extends ThreeScene<IFxSceneProps, IFxSceneState> {
             time: timeline.getConstants().elapsedTimeLevel.toFixed(2)
          });
 
+
         // emitter.dump();
-        // this.scene.add(new THREE.Mesh(geometry, new THREE.MeshNormalMaterial))
+        // do not call beginFrame() here (!)
+        // super.beginFrame();
     }
 
 

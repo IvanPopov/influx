@@ -1,5 +1,6 @@
 import { IMap } from '@lib/idl/IMap';
-import { EUsage, IConstantBuffer, ITechnique, ITechniquePassDesc } from '@lib/idl/ITechnique';
+import { EUsage, IConstantBuffer, ITechnique9, ITechnique9PassDesc } from '@lib/idl/ITechnique9';
+import { ITechnique } from '@lib/idl/ITechnique';
 
 import { BundleT } from '@lib/idl/bundles/auto/fx/bundle';
 import { MatBundleT } from '@lib/idl/bundles/auto/fx/mat-bundle';
@@ -8,8 +9,8 @@ import { EMatRenderRoutines } from '@lib/idl/bundles/auto/fx/emat-render-routine
 import { RoutineGLSLSourceBundleT } from '@lib/idl/bundles/auto/fx/routine-glslsource-bundle';
 import { RoutineSourceBundle } from '@lib/idl/bundles/auto/fx/routine-source-bundle';
 
-// tslint:disable-next-line:max-func-body-length
-function createMaterialFromBundle(bundle: BundleT): ITechnique {
+/** @deprecated */
+function createMaterialFromBundle(bundle: BundleT): ITechnique9 {
     const { name, content } = bundle;
     const { renderPasses } = content as MatBundleT;
 
@@ -63,7 +64,7 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
 
         const cbuffers = Object.values(cbufs);
 
-        function getDesc(): ITechniquePassDesc {
+        function getDesc(): ITechnique9PassDesc {
             return {
                 instanceName: instance.name as string,
                 instanceLayout: instanceLayout.map(({ name, offset, size }) => ({ name: <string>name, offset, size })), // FIXME
@@ -95,16 +96,19 @@ function createMaterialFromBundle(bundle: BundleT): ITechnique {
     };
 }
 
+/** @deprecated */
 export function copyTsMaterial(dst: ITechnique, src: ITechnique): boolean
 {
     return false;
 }
 
+/** @deprecated */
 export function destroyTsMaterial(tech: ITechnique): void 
 {
     // nothing todo
 }
 
+/** @deprecated */
 export function createTsMaterial(bundle: BundleT)
 {
     let newly = createMaterialFromBundle(bundle);

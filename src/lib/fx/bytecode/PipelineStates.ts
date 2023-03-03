@@ -96,12 +96,12 @@ export class PipelineStates {
     protected _knownDepthStencilStates: IDepthStencilStateEntry[] = [];
 
 
-    shaders(): IShaderEntry[] {
-        return Object.values(this._knownShaders);
+    dumpShaders(): IShaderEntry[] {
+        return Object.values(this._knownShaders).sort((a, b) => a.id - b.id);
     }
 
 
-    depthStencilStates(): IDepthStencilState[] {
+    dumpDepthStencilStates(): IDepthStencilState[] {
         return this._knownDepthStencilStates.map(entry => entry.state);
     }
 

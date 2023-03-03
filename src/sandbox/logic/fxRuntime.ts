@@ -3,6 +3,7 @@
 
 import { isNull, verbose } from '@lib/common';
 import * as FxBundle from '@lib/fx/bundles/Bundle';
+import * as FxBundle11 from '@lib/fx/bundles/Bundle11';
 import * as VM from '@lib/fx/bytecode/VM';
 import * as Techniques from '@lib/fx/techniques';
 import { ITechnique } from '@lib/idl/ITechnique';
@@ -19,8 +20,8 @@ import { createLogic } from 'redux-logic';
 
 import { decodeBundleControls } from '@lib/fx/bundles/utils';
 import { asFxTranslatorOprions } from '@sandbox/reducers/translatorParams';
-import { toast } from 'react-semantic-toasts';
 import path from 'path';
+import { toast } from 'react-semantic-toasts';
 import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
 function downloadByteBuffer(data: Uint8Array, fileName: string, mimeType: 'application/octet-stream') {
@@ -115,7 +116,7 @@ const playgroundUpdateLogic = createLogic<IStoreState, IPlaygroundSelectEffect['
                 return [ null, null ];
             }
 
-            const bundle = await FxBundle.createBundle11(list11[i], { translator, omitHLSL: true });
+            const bundle = await FxBundle11.createBundle(list11[i], { translator });
             const tech = Techniques.createTechnique(bundle);
             const controls = decodeBundleControls(bundle);
 

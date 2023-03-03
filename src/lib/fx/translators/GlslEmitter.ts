@@ -218,7 +218,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         this.end();
 
 
-        if (ctx.mode === 'vertex') {
+        if (ctx.mode === 'vs') {
             this.begin();
             {
                 const retType = def.returnType;
@@ -229,7 +229,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
             this.end();
         }
 
-        if (ctx.mode === 'pixel') {
+        if (ctx.mode === 'ps') {
             this.begin();
             this.emitLine(`out vec4 outColor;`);
             this.end();
@@ -275,8 +275,8 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         }
 
         const usage: { [key in typeof ctx.mode]?: string } = {
-            vertex: 'out',
-            pixel: 'in'
+            vs: 'out',
+            ps: 'in'
         };
 
         (this.emitKeyword(usage[ctx.mode]), this.emitVariable(ctx, decl, sname.varying), this.emitChar(';'), this.emitNewline());
@@ -285,9 +285,9 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
     protected emitVaryingOrAttribute(ctx: ContextT, decl: IVariableDeclInstruction) {
         switch(ctx.mode) {
-            case 'vertex':
+            case 'vs':
                 return this.emitAttribute(ctx, decl);
-            case 'pixel':
+            case 'ps':
                 return this.emitVarying(ctx, decl);
         }
     }
@@ -586,7 +586,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                         this.emitChar(fieldPos?.name);
                         this.emitChar(';');
                         this.emitNewline();
-                    } else { // pixel
+                    } else { // ps
                         this.emitKeyword('outColor');
                         this.emitKeyword('=');
                         this.emitKeyword(tempName);

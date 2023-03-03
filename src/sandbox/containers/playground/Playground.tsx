@@ -7,7 +7,8 @@
 import { IEmitter } from '@lib/idl/emitter';
 import { IParticleDebugViewer } from '@lib/idl/emitter/IEmitter';
 import { ETechniqueType } from '@lib/idl/IInstruction';
-import { ITechnique } from '@lib/idl/ITechnique';
+import { ITechnique11 } from '@lib/idl/ITechnique11';
+import { ITechnique9 } from '@lib/idl/ITechnique9';
 import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
 import * as ipc from '@sandbox/ipc';
@@ -21,7 +22,8 @@ import { connect } from 'react-redux';
 import { Button, Checkbox, Grid, Icon, List, Message, Popup, Table } from 'semantic-ui-react';
 import PartView from '../PartView';
 import FxScene from './FxScene';
-import MaterialScene from './MaterialScene';
+import Technique9Scene from './Technique9Scene';
+import Technique11Scene from './Technique11Scene';
 
 const ipcRenderer = ipc.isElectron() ? require('electron').ipcRenderer : null;
 
@@ -255,14 +257,19 @@ class Playground extends React.Component<IPlaygroundProps> {
     }
 
 
+    /** @deprecated */
     ranAsMaterial() {
-        // return this.techniqueType === 'material' && this.props.playground.technique;
         return this.props.playground.technique?.getType() === 'material';
     }
 
+
     ranAsEmitter() {
-        // return this.techniqueType === 'emitter' && this.props.playground.technique;
         return this.props.playground.technique?.getType() === 'emitter';
+    }
+
+
+    ranAsTechnique11() {
+        return this.props.playground.technique?.getType() === 'technique11';
     }
 
 
@@ -394,11 +401,21 @@ class Playground extends React.Component<IPlaygroundProps> {
                             }
 
                             {this.ranAsMaterial() &&
-                                <MaterialScene
+                                <Technique9Scene
                                     style={threeStylesHotfix}
                                     timeline={timeline}
                                     controls={controls}
-                                    material={technique as ITechnique}
+                                    material={technique as ITechnique9}
+                                    canvasRef={(canvas) => this.canvasRef = canvas}
+                                />
+                            }
+
+                            {this.ranAsTechnique11() &&
+                                <Technique11Scene
+                                    style={threeStylesHotfix}
+                                    timeline={timeline}
+                                    controls={controls}
+                                    technique={technique as ITechnique11}
                                     canvasRef={(canvas) => this.canvasRef = canvas}
                                 />
                             }

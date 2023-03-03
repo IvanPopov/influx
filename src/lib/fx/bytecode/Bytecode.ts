@@ -208,7 +208,7 @@ const CHUNK_EMPTY = (new Uint8Array(0)).buffer;
 
 function shadersChunk(ctx: IContext): ArrayBuffer {
     const { pipeline } = ctx;
-    const shaders = pipeline.shaders();
+    const shaders = pipeline.dumpShaders();
 
     if (shaders.length === 0) {
         return CHUNK_EMPTY;
@@ -262,7 +262,7 @@ function shadersChunk(ctx: IContext): ArrayBuffer {
 // depth stencil state
 function dssChunk(ctx: IContext): ArrayBuffer {
     const { pipeline } = ctx;
-    const depthStencilStates = pipeline.depthStencilStates();
+    const depthStencilStates = pipeline.dumpDepthStencilStates();
 
     if (depthStencilStates.length === 0) {
         return CHUNK_EMPTY;

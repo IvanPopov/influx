@@ -111,8 +111,8 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
                     return (<div>Ooops!...</div>);
                 }
 
-            const mode = match.params.property === 'VertexShader' ? 'vertex' : 'pixel';
-            const shader = mode === 'vertex' ? pass.vertexShader : pass.pixelShader;
+            const mode = match.params.property === 'VertexShader' ? 'vs' : 'ps';
+            const shader = mode === 'vs' ? pass.vertexShader : pass.pixelShader;
 
             original = HLSLEmitter.translate(shader, new HLSLContext({ mode }));
             switch (pg.shaderFormat) {

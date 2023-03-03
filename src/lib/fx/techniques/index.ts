@@ -30,23 +30,26 @@ import * as flatbuffers from 'flatbuffers';
 import { ITexture, ITextureDesc, ITrimesh, ITrimeshDesc } from '@lib/idl/emitter/IEmitter';
 import { Bundle, BundleT } from '@lib/idl/bundles/auto/fx/bundle';
 import { BundleContent } from '@lib/idl/bundles/auto/fx/bundle-content';
-function HACK_IsMaterialBundle(data: Uint8Array | BundleT): boolean {
-    // load from packed version, see PACKED in @lib/fx/bundles/Bundle.ts
-    if (data instanceof Uint8Array) {
-        let buf = new flatbuffers.ByteBuffer(data);
-        return Bundle.getRootAsBundle(buf).contentType() === BundleContent.MatBundle;
-    }
 
-    return (<BundleT>data).contentType === BundleContent.MatBundle;
+function HACK_GetBundleType(data: Uint8Array | BundleT): BundleContent {
+        if (data instanceof Uint8Array) {
+            let buf = new flatbuffers.ByteBuffer(data);
+            return Bundle.getRootAsBundle(buf).contentType();
+        }
+        return (<BundleT>data).contentType;
 }
+
 // end of hack
 
 export function createTechnique(data: Uint8Array | BundleT): ITechnique {
     // hack:
-    // cpp module doesn't support material bundles
-    if (HACK_IsMaterialBundle(data) && isWASM()) {
-        console.warn('material bundle was created using TS module while WASM is on.');
-        return TSPipe.createTechnique(data);
+    // cpp module doesn't support material/technique11 bundles
+    // so redirect them to TS only solution
+    if (isWASM()) {
+        if (HACK_GetBundleType(data) === BundleContent.MatBundle || HACK_GetBundleType(data) === BundleContent.Technique11Bundle) {
+            console.warn(`${BundleContent[HACK_GetBundleType(data)]} bundle was created using TS module while WASM is on.`);
+            return TSPipe.createTechnique(data);
+        }
     }
     // end of hack
 

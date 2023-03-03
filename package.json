@@ -1,6 +1,6 @@
 {
   "name": "influx",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "license": "UNLICENSED",
   "private": false,
   "engines": {
