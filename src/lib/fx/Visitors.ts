@@ -1,4 +1,4 @@
-import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, ISamplerStateBlockInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IWhileStmtInstruction, IBitwiseExprInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, ILogicalExprInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, ISamplerStateBlockInstruction, IStmtBlockInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction, IWhileStmtInstruction, IBitwiseExprInstruction, ICompileShader11Instruction } from "@lib/idl/IInstruction";
 
 // TODO: move it to helpers
 export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: IInstruction) => void) {
@@ -71,7 +71,8 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
             // visit((owner as ICompileExprInstruction).function);
             break;
         case EInstructionTypes.k_CompileShader11Expr:
-            console.assert(false, 'not implemented');
+            visit((owner as ICompileShader11Instruction).func);
+            (owner as ICompileShader11Instruction).args.forEach(arg => visit(arg));
             break;
         case EInstructionTypes.k_ComplexExpr:
             visit((owner as IComplexExprInstruction).expr);
@@ -102,6 +103,7 @@ export function visitor(owner: IInstruction, cb: (instr: IInstruction, owner?: I
         case EInstructionTypes.k_FloatExpr:
         case EInstructionTypes.k_BoolExpr:
         case EInstructionTypes.k_StringExpr:
+        case EInstructionTypes.k_NullExpr:
             // nothing todo
             break;
         case EInstructionTypes.k_LogicalExpr:

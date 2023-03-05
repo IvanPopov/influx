@@ -157,6 +157,7 @@ export class PipelineStates {
         }
 
         const state = createDepthStencilState();
+        const id = entries.length;
         entries.push({ name, state });
 
         if (initExpr) {
@@ -182,7 +183,7 @@ export class PipelineStates {
             state.BackFace.StencilFunc = evalPropEnum(props, 'BackFaceStencilFunc', EComparisonFunc, state.BackFace.StencilFunc);
         }
         
-        return entries.length;
+        return id;
     }
 
 

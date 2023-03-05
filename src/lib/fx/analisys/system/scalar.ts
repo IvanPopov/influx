@@ -8,6 +8,7 @@ export function addSystemTypeScalar(scope: IScope) {
     generateSystemType(scope, "bool", 4);
     generateSystemType(scope, "float", 4);
     generateSystemType(scope, "string", 4/* pointer to string */);
+    generateSystemType(scope, "null_t", 4/* pointer */);
 
     // TODO: use dedicated type for half
     defineTypeAlias(scope, "float", "half");

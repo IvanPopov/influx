@@ -16,20 +16,13 @@ import * as React from 'react';
 import { MonacoDiffEditor } from 'react-monaco-editor';
 import { connect } from 'react-redux';
 import { RouteComponentProps, withRouter } from 'react-router';
+import { assert } from '@lib/common';
+import { isString } from '@lib/util/s3d/type';
 
 interface IShaderTranslatorViewProps extends IStoreState, RouteComponentProps {
 
 }
 
-
-// function cutSourceRange(content: string, range: IRange): string {
-//     const { start, end } = range;
-//     // console.log(range);
-//     const lines = content.split('\n').slice(start.line, end.line + 1);
-//     lines[0] = lines[0].substr(start.column);
-//     lines[lines.length - 1] = lines[lines.length - 1].substr(0, end.column);
-//     return lines.join('\n');
-// }
 
 const diffOptions: monaco.editor.IDiffEditorConstructionOptions = {
     selectOnLineNumbers: true,
@@ -55,7 +48,6 @@ const diffOptions: monaco.editor.IDiffEditorConstructionOptions = {
     ignoreTrimWhitespace: true
 };
 
-/** @deprecated Use ShaderTranslatorView11 instead. */
 @(withRouter as any)
 class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
@@ -66,13 +58,9 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
         original.updateOptions({ tabSize: 4 });
     }
 
-    // shouldComponentUpdate(nextProps: IShaderTranslatorViewProps) {
-    //     return getFileState(this.props).content !== getFileState(nextProps).content;
-    // }
 
     // tslint:disable-next-line:typedef
     render() {
-        // console.log('ShaderTranslatorView::render()');
         const { props } = this;
 
         const match = matchLocation(props);
@@ -84,11 +72,10 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             return null;
         }
 
-        const fxList = filterTechniques(scope);
-        const fx = fxList.find(tech => tech.name === match.params.name);
+        const entryFunc = scope.findFunction(match.params.name, null);
 
-        if (!fx) {
-            console.warn(`<${match.params.name}> effect has not been found!`);
+        if (!entryFunc) {
+            console.warn(`<${match.params.name}> entry function has not been found!`);
             return null;
         }
 
@@ -102,36 +89,22 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
             : { textDocument: null, slastDocument: null };
         const translatorOpts = asFxTranslatorOptions(props);
 
-        // TODO: sync translation with Bundle generation (!)
-
-        if (match.params.pass) {
-            const pass = fx.passes.find((instr, i) => /^[0-9]+$/.test(match.params.pass)
-                ? i === Number(match.params.pass)
-                : instr.name === match.params.pass);
-
-                if (!pass) {
-                    return (<div>Ooops!...</div>);
-                }
-
-            const mode = match.params.property === 'VertexShader' ? 'vs' : 'ps';
-            const shader = mode === 'vs' ? pass.vertexShader : pass.pixelShader;
-
-            original = HLSLEmitter.translate(shader, new HLSLContext({ mode }));
-            switch (pg.shaderFormat) {
-                case 'glsl':
-                    // todo: show final shader instead of direct translation
-                    value = GLSLEmitter.translate(shader, new GLSLContext({ mode }));
-                    break;
-                case 'hlsl':
-                   // todo: show final shader instead of direct translation
-                   value = HLSLConvolutionEmitter.translate(shader, new HLSLConvolutionContext({ ...convPack, mode }));
-                   break;
-            }
-        } else {
-            original = FxEmitter.translate(fx, new FxConvolutionContext({ ...convPack }));
-            value = FxTranslator.translate(fx, new FxTranslatorContext({ ...convPack, ...translatorOpts }));
-        }
-
+        // huck way to get type, because all the request
+        // like /playground/:name/:fx/:pass/:property is being redirected to 
+        // deprectaed ShaderTranslatorView
+        // only requests like /playground/:name/:fx/(vertexshader|pixelshader) is being 
+        // intercepted by ShaderTranslatorView11
+        const shType = match.params.pass;
+        const SH_MODE = {
+            'VertexShader': 'vs',
+            'PixelShader' : 'ps'
+        };
+        const mode = SH_MODE[shType];
+        assert(isString(mode));
+        
+        original = FxEmitter.translate(entryFunc, new FxConvolutionContext({ ...convPack, mode }));
+        value = FxTranslator.translate(entryFunc, new FxTranslatorContext({ ...convPack, ...translatorOpts, mode }));
+    
         return (
             <MonacoDiffEditor
                 ref='monaco'
@@ -144,12 +117,11 @@ class ShaderTranslatorView extends React.Component<IShaderTranslatorViewProps> {
 
                 options={ diffOptions }
                 editorDidMount={ this.editorDidMount }
-            // onChange={ this.onChange }
-            // editorWillMount={ this.editorWillMount }
             />
         );
     }
 }
+
 
 export default connect<{}, {}, IShaderTranslatorViewProps>(mapProps(getCommon), null)
     (ShaderTranslatorView) as any;

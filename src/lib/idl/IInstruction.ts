@@ -28,6 +28,7 @@ export enum EInstructionTypes {
     k_FloatExpr,
     k_BoolExpr,
     k_StringExpr,
+    k_NullExpr,
     k_ArithmeticExpr,
     k_AssignmentExpr,
     k_BitwiseExpr,

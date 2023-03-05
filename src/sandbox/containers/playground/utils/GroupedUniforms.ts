@@ -10,6 +10,25 @@ interface IViewport {
     clientHeight: number;
 }
 
+function copyMat4x4(uniforms: THREE.Uniform[], offset: number, mat: THREE.Matrix4) {
+    const pos = (offset / 16) >>> 0; // in vector
+    (uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
+    (uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
+    (uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
+    (uniforms[pos + 3].value as THREE.Vector4).fromArray(mat.elements, 12);
+}
+
+
+function copyMat4x3(uniforms: THREE.Uniform[], offset: number, mat: THREE.Matrix4) {
+    const pos = (offset / 16) >>> 0; // in vector
+    (uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
+    (uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
+    (uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
+}
+
+function transpose(mat: THREE.Matrix4): THREE.Matrix4 {
+    return (new THREE.Matrix4).copy(mat).transpose();
+}
 
 export class GroupedUniforms {
     // per pass x per buffer
@@ -27,13 +46,13 @@ export class GroupedUniforms {
         // create uniform groups for each pass
         for (let i = 0; i < tech9.getPassCount(); ++i) {
             const cbuffers = tech9.getPass(i).getDesc().cbuffers;
-            this.create(cbuffers);
+            this.uniformGroups.push(GroupedUniforms.create(cbuffers));
         }
     }
 
 
-    protected create(cbuffers: IConstantBuffer[]) {
-        const groups = [];
+    static create(cbuffers: IConstantBuffer[]): THREE.UniformsGroup[] {
+        const groups: THREE.UniformsGroup[] = [];
         for (let cbuf of cbuffers) {
             let { name, size, usage } = cbuf;
 
@@ -48,7 +67,7 @@ export class GroupedUniforms {
             groups.push(group);
         }
 
-        this.uniformGroups.push(groups);
+        return groups;
     }
 
 
@@ -63,28 +82,45 @@ export class GroupedUniforms {
         const cbuffers: IConstantBuffer[][] = [];
         for (let iPass = 0; iPass < tech9.getPassCount(); ++iPass) {
             const cbuffers = tech9.getPass(iPass).getDesc().cbuffers;
-            this.update(camera, viewport, controls, timeline, deps, iPass, cbuffers);
+            const groups = this.uniformGroups[iPass];
+            GroupedUniforms.update(camera, viewport, controls, timeline, deps, groups, cbuffers);
         }
     }
 
-    protected update(
+    
+    static update(
         camera: THREE.PerspectiveCamera,
         viewport: IViewport,
         controls: IPlaygroundControlsState,
         timeline: ITimeline,
         deps: IDeps,
-        iPass: number,
+        groups: THREE.UniformsGroup[],
         cbuffers: IConstantBuffer[]
     ) {
-        const viewMatrix = camera.matrixWorldInverse;
-        const projMatrix = camera.projectionMatrix;
-        const viewprojMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix).transpose();
+
+        /*
+        uniform mat4 modelMatrix;       // = object.matrixWorld
+        uniform mat4 modelViewMatrix;   // = camera.matrixWorldInverse * object.matrixWorld
+        uniform mat4 projectionMatrix;  // = camera.projectionMatrix
+        uniform mat4 viewMatrix;        // = camera.matrixWorldInverse
+        uniform mat3 normalMatrix;      // = inverse transpose of modelViewMatrix
+        uniform vec3 cameraPosition;    // = camera position in world space
+        */
+
+        const identityMatrix = new THREE.Matrix4();
+        // todo: move out model matrix from global uniforms
+        const modelMatrix = (new THREE.Matrix4).copy(identityMatrix);
+        const viewMatrix = (new THREE.Matrix4).copy(camera.matrixWorldInverse);
+        const projMatrix = (new THREE.Matrix4).copy(camera.projectionMatrix);
+        const modelViewMatrix = (new THREE.Matrix4).multiplyMatrices(viewMatrix, modelMatrix);
+        const viewProjMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix);
+
         const { clientWidth, clientHeight } = viewport;
         const constants = timeline.getConstants();
 
         for (let c = 0; c < cbuffers.length; ++c) {
             let cbuf = cbuffers[c];
-            let group = this.uniformGroups[iPass][c];
+            let group = groups[c];
             let { name, size, usage } = cbuf;
 
             switch (name) {
@@ -121,6 +157,20 @@ export class GroupedUniforms {
                                     (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTime);
                                 }
                                 break;
+                            case 'MODEL_MATRIX':
+                                copyMat4x4(group.uniforms, padding, modelMatrix);
+                                break;
+                            case 'MODEL_VIEW_MATRIX':
+                                copyMat4x4(group.uniforms, padding, modelViewMatrix);
+                                break;
+                            case 'VIEW_MATRIX':
+                                copyMat4x4(group.uniforms, padding, viewMatrix);
+                                break;
+                            case 'PROJECTION_MATRIX':
+                                copyMat4x4(group.uniforms, padding, projMatrix);
+                                break;
+                            default:
+                                // console.error(`GLOBAL_UNIFORMS: unknown semantic <${semantic}> found.`);
                         }
                     }
                     break;
@@ -128,13 +178,8 @@ export class GroupedUniforms {
                     for (let { name, padding, semantic } of cbuf.fields) {
                         switch (semantic) {
                             case 'COMMON_VIEWPROJ_MATRIX':
-                                {
-                                    const pos = (padding / 16) >>> 0; // in vector
-                                    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 0);
-                                    (group.uniforms[pos + 1].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 4);
-                                    (group.uniforms[pos + 2].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 8);
-                                    (group.uniforms[pos + 3].value as THREE.Vector4).fromArray(viewprojMatrix.elements, 12);
-                                }
+                                // note: husky uses transposed matrices (!)
+                                copyMat4x4(group.uniforms, padding, transpose(viewProjMatrix));
                                 break;
                             case 'COMMON_VP_PARAMS':
                                 {
@@ -143,13 +188,8 @@ export class GroupedUniforms {
                                 }
                                 break;
                             case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':
-                                {
-                                    const pos = (padding / 16) >>> 0; // in vector
-                                    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1, 0, 0, 0]);
-                                    (group.uniforms[pos + 1].value as THREE.Vector4).fromArray([0, 1, 0, 0]);
-                                    (group.uniforms[pos + 2].value as THREE.Vector4).fromArray([0, 0, 1, 0]);
-                                    break;
-                                }
+                                copyMat4x3(group.uniforms, padding, identityMatrix);
+                                break;
                         }
                     }
             }

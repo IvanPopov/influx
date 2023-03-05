@@ -117,6 +117,7 @@ export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvol
     }
 
 
+    /** @deprecated */
     emitTechniqueDecl(ctx: ContextT, fx: ITechniqueInstruction) {
         ctx.beginTechnique(fx);
         this.begin();
@@ -138,6 +139,11 @@ export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvol
         }
         this.end();
         ctx.endTechnique();
+    }
+
+
+    emitTechnique11Decl(ctx: ContextT, fx: ITechnique11Instruction) {
+        console.warn(`emitTechnique11Decl() not implemented`);
     }
 
 
@@ -209,6 +215,9 @@ export class FxEmitter<ContextT extends FxConvolutionContext> extends CodeConvol
                 break;
             case EInstructionTypes.k_TechniqueDecl:
                 this.emitTechniqueDecl(ctx, instr as ITechniqueInstruction);
+                break;
+            case EInstructionTypes.k_Technique11Decl:
+                this.emitTechnique11Decl(ctx, instr as ITechnique11Instruction);
                 break;
             default:
                 super.emit(ctx, instr)

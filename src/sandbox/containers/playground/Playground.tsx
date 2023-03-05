@@ -13,7 +13,7 @@ import * as Path from '@lib/path/path';
 import { mapActions, playground as playgroundActions } from '@sandbox/actions';
 import * as ipc from '@sandbox/ipc';
 import { getCommon, mapProps } from '@sandbox/reducers';
-import { filterTechniques, getEmitterName } from '@sandbox/reducers/playground';
+import { filterTechniques, filterTechniques11, getEmitterName } from '@sandbox/reducers/playground';
 import { getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState from '@sandbox/store/IStoreState';
 import autobind from 'autobind-decorator';
@@ -192,7 +192,7 @@ class Playground extends React.Component<IPlaygroundProps> {
     onParticleDebugViewerConnected() {
         let emitter = this.props.playground.technique as IEmitter;
         this.debugViewer = emitter.createDebugViewer();
-        
+
         this.dumpParticles();
     }
 
@@ -301,12 +301,14 @@ class Playground extends React.Component<IPlaygroundProps> {
         const snapshot = this.canvasSnapshot;
         const scope = getScope(props.sourceFile);
 
+        /** @deprecated */
         const list = filterTechniques(scope);
+        const list11 = filterTechniques11(scope);
         const active = getEmitterName(playground);
 
         return (
             <div>
-                {!list.length &&
+                {!list.length && !list11.length &&
                     <Message info style={textAlignCenter}>
                         <Message.Content>
                             No effects found :/
@@ -325,6 +327,23 @@ class Playground extends React.Component<IPlaygroundProps> {
                                 >
                                     {fx.name}
                                 </List.Item>
+                            ))}
+                            {list11.map(fx => (
+                                <Popup inverted
+                                    content={
+                                        <span>{fx.name}</span>
+                                    }
+                                    trigger={
+                                        <List.Item
+                                            key={`li-${fx.name}`}
+                                            disabled={!fx.isValid()}
+                                            as={(fx.name === active ? 'b' : 'a')}
+                                            onClick={() => this.pickEffect(fx.name)}
+                                        >
+                                            {fx.name.substring(0, Math.min(fx.name.length, 10)) + (fx.name.length > 10 ? `..` : ``)}
+                                        </List.Item>
+                                    }
+                                />
                             ))}
                         </List>
                         <div>

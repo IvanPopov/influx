@@ -13,7 +13,7 @@ import { BaseEmitter } from "./BaseEmitter";
 import { BreakStmtInstruction } from "../analisys/instructions/BreakStmtInstruction";
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
 
-interface ITypeInfo {
+export interface ITypeInfo {
     typeName: string;
     length: number;
     usage?: string;
@@ -118,6 +118,7 @@ export class CodeContext {
     constructor(opts: ICodeContextOptions = {}) {
         this.opts = opts;
         this.opts.mode ||= 'raw';
+        console.assert([ 'vs', 'ps', 'ds', 'hs', 'gs', 'cs', 'raw' ].includes(this.opts.mode));
     }
 
     get entryName(): string { return this.opts.entryName; }
@@ -518,6 +519,11 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
 
 
+    protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
+        this.emitParams(ctx, params);
+    }
+
+
     // todo: add compute entry support
     protected emitEntryFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
         const { def } = fn;
@@ -532,7 +538,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             this.emitKeyword(fnName);
             this.emitChar('(');
             this.emitNoSpace();
-            this.emitParams(ctx, def.params);
+            this.emitEntryParams(ctx, def.params);
             this.emitChar(')');
 
             // todo: validate complex type sematics
@@ -975,17 +981,9 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
     // request global declaration for local identifier
     emitGlobal(ctx: ContextT, decl: IVariableDeclInstruction) {
-        // const name = decl.name;
-        // if (isMain() && decl.isParameter() && !decl.isUniform()) {
-        // TODO: add support of main arguments with basic types (attributes)
-        // }
-
-        const isUniformArg = this.isMain() && decl.isParameter() && decl.type.isUniform();
-
-        // if (decl.type.isUniform())
-        // console.log(decl.toCode());
-
         const { name, type } = decl;
+        const isUniformArg = this.isMain() && decl.isParameter() && type.isUniform();
+
 
         if (decl.isGlobal() || isUniformArg) {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {

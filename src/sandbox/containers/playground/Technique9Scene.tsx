@@ -43,7 +43,7 @@ class Technique9Scene extends HDRScene<IProps, IState> {
     }
 
 
-    reloadModel() {
+    private reloadModel() {
         const loader = new OBJLoader();
         const params = this.params;
         const passCount = this.props.material.getPassCount();

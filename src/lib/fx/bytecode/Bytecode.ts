@@ -1024,7 +1024,7 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
 
                     // GetDimensions(w, h) only supported
                     assert(tex.type.name.includes('Texture2D'));
-                    assert(args.length === 2);
+                    assert(args.length === 3);
 
                     const w = addr.sub(texAddr, 0, sizeof.i32());
                     const h = addr.sub(texAddr, sizeof.i32(), sizeof.i32());
@@ -1124,6 +1124,14 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                     // input0, size = 4/* cstr.length */ + sizeof(cstr)
                     const constAddr = constants.derefCString(cstr);
                     return iconst_i32(constAddr.addr); // write to register addr of string in constant buffer 0. 
+                }
+                break;
+            case EInstructionTypes.k_NullExpr:
+                {
+                    // it's assumed that all the types which can be converted 
+                    // to NULL are pointers, so we can replace its address with 4 bytes
+                    // value.
+                    return iconst_i32(0);
                 }
                 break;
             case EInstructionTypes.k_IdExpr:

@@ -41,6 +41,7 @@ export const SCOPE = scope;
 
 export const T_VOID = scope.findType("void");
 export const T_STRING = scope.findType("string");
+export const T_NULL = scope.findType("null_t");
 
 export const T_SAMPLER_STATE = scope.findType("SamplerState");
 export const T_BLEND_STATE = scope.findType("BlendState");

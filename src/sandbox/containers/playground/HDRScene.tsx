@@ -63,7 +63,7 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
 
         this.mount.appendChild(gui.domElement);
         gui.domElement.style.position = 'absolute';
-        gui.domElement.style.bottom = '20px';
+        gui.domElement.style.bottom = '23px';
 
         let tonemap = gui.addFolder('tonemapping');
 

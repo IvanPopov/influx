@@ -56,6 +56,8 @@ export class TSBundle implements Bundle.IBundle
     private instructions: Uint32Array;
     private inputs: Int32Array[];
     private layout: Bundle.IConstant[];
+    private depthStencilStates: Bundle.IDepthStencilState[];
+    private shaders: Bundle.IShader[];
     private externs: Bundle.IExtern[];
     private ncalls: Function[];         // native calls
 
@@ -83,6 +85,8 @@ export class TSBundle implements Bundle.IBundle
         const constants = decodeConstChunk(chunks[EChunkType.k_Constants]);
         this.instructions = decodeCodeChunk(codeChunk);
         this.layout = decodeLayoutChunk(chunks[EChunkType.k_Layout]);
+        this.depthStencilStates = decodeDepthStencilStates(chunks[EChunkType.k_DepthStencilStates]);
+        this.shaders = decodeShadersChunk(chunks[EChunkType.k_Shaders]);
         this.externs = decodeExternsChunk(chunks[EChunkType.k_Externs]);
         this.inputs = Array<Int32Array>(64).fill(null);
         this.inputs[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset, constants.length >> 2);
@@ -109,6 +113,18 @@ export class TSBundle implements Bundle.IBundle
                 let len = i32a[byteOffset >> 2];
                 let u8a = new Uint8Array(i32a.buffer, i32a.byteOffset + byteOffset + 4, len);
                 return String.fromCharCode(...u8a);
+            }
+            case 'DepthStencilState': {
+                let id = u8ArrayToI32(u8);
+                return this.depthStencilStates[id];
+            }
+            case 'VertexShader':
+            case 'PixelShader': 
+            case 'GeometryShader': {
+                let id = u8ArrayToI32(u8);
+                if (id == 0) // NULL was passed as shader
+                    return null;
+                return this.shaders[id - 1];
             }
         }
         return asNativeRaw(u8, layout);
@@ -630,6 +646,10 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.IConstant[] {
 }
 
 export function decodeShadersChunk(shadersChunk: Uint8Array): Bundle.IShader[] {
+    if (!shadersChunk) {
+        return null;
+    }
+
     let readed = 0;
     let shadersCount = u8ArrayToI32(shadersChunk.subarray(readed, readed + 4));
     readed += 4;
@@ -680,6 +700,10 @@ export function decodeShadersChunk(shadersChunk: Uint8Array): Bundle.IShader[] {
 
 
 export function decodeDepthStencilStates(dssChunk: Uint8Array): Bundle.IDepthStencilState[] {
+    if (!dssChunk) {
+        return null;
+    }
+
     let readed = 0;
     let shadersCount = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
     readed += 4;

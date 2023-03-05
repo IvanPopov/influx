@@ -1,9 +1,9 @@
 import { assert, isDef } from "@lib/common";
-import { types } from "@lib/fx/analisys/helpers";
+import { types, instruction } from "@lib/fx/analisys/helpers";
 import { IdExprInstruction } from "@lib/fx/analisys/instructions/IdExprInstruction";
-import { EInstructionTypes, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { EInstructionTypes, IArithmeticExprInstruction, IAssignmentExprInstruction, ICastExprInstruction, ICbufferInstruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, ITypeInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
-import { CodeEmitter, CodeContext, ICodeEmitterOptions } from "./CodeEmitter";
+import { CodeEmitter, CodeContext, ICodeEmitterOptions, ITypeInfo } from "./CodeEmitter";
 
 const GlslTypeNames = {
     'void': 'void',
@@ -24,11 +24,12 @@ const GlslTypeNames = {
     'float3': 'vec3',
     'float4': 'vec4',
     'float4x4': 'mat4',
+    'float3x3': 'mat3x3',
     'float3x4': 'mat3x4'
 }
 
-const HlslTypeNames = Object.fromEntries(Object.entries(GlslTypeNames).map(([k, v]) => [v, k]));
- 
+// const HlslTypeNames = Object.fromEntries(Object.entries(GlslTypeNames).map(([k, v]) => [v, k]));
+
 
 const sname = {
     attr: (decl: IVariableDeclInstruction) => decl.semantic ?
@@ -40,17 +41,28 @@ const sname = {
     // uniform: (decl: IVariableDeclInstruction) => `u_${decl.name}`
 };
 
-const IS_POSITION = (semantic: string) => ['POSITION', 'SV_Position'].indexOf(semantic) !== -1;
-const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_InstanceID'].indexOf(semantic) !== -1;
-const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VertexID'].indexOf(semantic) !== -1;
+const IS_POSITION = (semantic: string) => ['POSITION', 'SV_POSITION'].indexOf(semantic.toUpperCase()) !== -1;
+const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_INSTANCEID'].indexOf(semantic.toUpperCase()) !== -1;
+const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VERTEXID'].indexOf(semantic.toUpperCase()) !== -1;
 
+function determMostPreciseBaseType(left: ITypeInstruction, right: ITypeInstruction): ITypeInstruction {
+    const length =
+        SystemScope.isScalarType(left)
+            ? right.length
+            : SystemScope.isScalarType(right)
+                ? left.length
+                : Math.min(left.length, right.length);
+    const mpbt = SystemScope.determMostPreciseBaseType(left, right);
+    const mpt = SystemScope.findType(`${mpbt.name}${length === 1 ? '' : length}`);
+    return mpt;
+}
 
 export class GLSLContext extends CodeContext {
     location: number = 0;
 
     has(signature: string): boolean {
         // nothing todo - built in GLSL function
-        const SYSTEM_FUNCS = [ 'unpackHalf2x16(uint)' ];
+        const SYSTEM_FUNCS = ['unpackHalf2x16(uint)'];
         if (SYSTEM_FUNCS.includes(signature)) {
             return true;
         }
@@ -60,7 +72,7 @@ export class GLSLContext extends CodeContext {
 
 
 export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<ContextT> {
-    
+
     protected resolveTypeName(type: ITypeInstruction): string {
         const typeName = GlslTypeNames[type.name];
         if (!isDef(typeName)) {
@@ -69,6 +81,15 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         }
 
         return typeName;
+    }
+
+    // GLSL doesn't support static keyword
+    protected resolveType(ctx: ContextT, type: ITypeInstruction): ITypeInfo {
+        let info = super.resolveType(ctx, type);
+        if (info) {
+            info.usage = info.usage?.split(' ').filter(kw => kw !== 'static').join(' ');
+        }
+        return info;
     }
 
 
@@ -84,7 +105,56 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         return false;
     }
 
+    emitExpressionWithCast(ctx: ContextT, expr: IExprInstruction, type: ITypeInstruction) {
+        const { typeName } = this.resolveType(ctx, type);
+        if (!types.equals(type, expr.type)) {
+            this.emitKeyword(typeName);
+            this.emitNoSpace();
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitExpression(ctx, expr);
+            this.emitChar(')');
+        } else {
+            this.emitExpression(ctx, expr);
+        }
+    }
 
+
+    emitExpressionListWithCast(ctx: ContextT, list: IExprInstruction[], types: ITypeInstruction[]) {
+        list?.forEach((expr, i) => {
+            this.emitExpressionWithCast(ctx, list[i], types[i]);
+            (i != list.length - 1) && this.emitChar(',');
+        })
+    }
+
+
+    emitArithmetic(ctx: ContextT, arthm: IArithmeticExprInstruction) {
+        let { left, right, operator } = arthm;
+        if (!types.equals(left.type, right.type)) {
+            const mpt = determMostPreciseBaseType(left.type, right.type);
+            this.emitExpressionWithCast(ctx, left, mpt);
+            this.emitKeyword(operator);
+            this.emitSpace();
+            this.emitExpressionWithCast(ctx, right, mpt);
+            return;
+        }
+        super.emitArithmetic(ctx, arthm);
+    }
+
+
+    emitAssigment(ctx: ContextT, asgm: IAssignmentExprInstruction) {
+        let { left, right, operator } = asgm;
+        if (!types.equals(left.type, right.type)) {
+            const mpt = determMostPreciseBaseType(left.type, right.type);
+            this.emitExpressionWithCast(ctx, left, mpt);
+            this.emitKeyword(operator);
+            this.emitSpace();
+            assert(instruction.isExpression(right));
+            this.emitExpressionWithCast(ctx, right as IExprInstruction, mpt);
+            return;
+        }
+        super.emitAssigment(ctx, asgm);
+    }
 
 
     emitSemantic(ctx: ContextT, semantic: string) {
@@ -92,8 +162,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
     }
 
 
-    emitPostfixIndex(ctx: ContextT, pfidx: IPostfixIndexInstruction)
-    {
+    emitPostfixIndex(ctx: ContextT, pfidx: IPostfixIndexInstruction) {
         if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(pfidx.element.type.name)) {
             // TODO: fixme
             this.emitKeyword(`${this.resolveType(ctx, pfidx.type).typeName}(0.0, 0.0, 0.0, 0.0)`);
@@ -101,18 +170,18 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
             // this.emitLine(`texelFetch(`, texelCoord, 0).x`);
             this.emitKeyword('texelFetch');
             this.emitChar('(');
-                this.emitNoSpace();
-                this.emitExpression(ctx, pfidx.element);
-                this.emitChar(',');
-                this.emitKeyword(`ivec2`);
-                this.emitChar('(');
-                    this.emitNoSpace();
-                    this.emitExpression(ctx, pfidx.index);
-                    this.emitChar(',');
-                    this.emitKeyword('0');
-                this.emitChar(')');
-                this.emitChar(',');
-                this.emitKeyword('0');
+            this.emitNoSpace();
+            this.emitExpression(ctx, pfidx.element);
+            this.emitChar(',');
+            this.emitKeyword(`ivec2`);
+            this.emitChar('(');
+            this.emitNoSpace();
+            this.emitExpression(ctx, pfidx.index);
+            this.emitChar(',');
+            this.emitKeyword('0');
+            this.emitChar(')');
+            this.emitChar(',');
+            this.emitKeyword('0');
             this.emitChar(')');
             return;
         }
@@ -125,7 +194,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         if (src.isGlobal()) {
             // IP: hack for fake compartibility with GLSL 3.00 ES
             // convert buffers to samplers
-            if (/^Buffer(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+            if (SystemScope.isBuffer(type)) {
                 const { typeName } = this.resolveType(ctx, type.arrayElementType);
 
                 this.emitKeyword('uniform highp');
@@ -141,7 +210,8 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
             }
         }
 
-        if (/^Texture2D(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+        // todo: add support not only for 2D textures
+        if (SystemScope.isTexture(type)) {
             this.emitKeyword('sampler2D');
             this.emitKeyword(src.name);
             return;
@@ -176,7 +246,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
             this.emitLine(`#version 300 es`);
 
             this.emitLine(`precision highp float;`);
-            // this.emitLine(`precision highp int;`);
+            this.emitLine(`precision highp int;`);
             // this.emitLine(`precision highp unsigned int;`);
         }
         this.end();
@@ -189,8 +259,8 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
                 const type = param.type;
 
-                this.emitComment(param.toCode());
-                this.emitNewline();
+                // this.emitComment(param.toCode());
+                // this.emitNewline();
 
                 if (!type.isComplex()) {
                     this.emitVaryingOrAttribute(ctx, param);
@@ -207,13 +277,15 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
         this.begin();
         {
-            for (const param of def.params) {
-                if (!param.type.isUniform()) {
-                    continue;
-                }
+            // for (const param of def.params) {
+            //     if (!param.type.isUniform()) {
+            //         continue;
+            //     }
 
-                this.emitVariable(ctx, param);
-            }
+            //     this.emitVariable(ctx, param);
+            //     this.emitChar(`;`);
+            //     this.emitNewline();
+            // }
         }
         this.end();
 
@@ -230,8 +302,22 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         }
 
         if (ctx.mode === 'ps') {
+            // layout(location = 0) out vec3 color;
             this.begin();
-            this.emitLine(`out vec4 outColor;`);
+
+            if (types.equals(def.returnType, SystemScope.T_FLOAT4)) {
+                this.emitLine(`layout(location = 0) out vec4 out_color;`);
+            } else if (def.returnType.isComplex()) {
+                const ctype = def.returnType;
+                ctype.fields.forEach((field, i) => {
+                    const { typeName } = this.resolveType(ctx, field.type);
+                    assert(!field.type.isComplex() && !field.type.isNotBaseArray());
+                    this.emitLine(`layout(location = ${i}) out ${typeName} out_${field.name};`);
+                });
+            } else {
+                assert(false, 'unsupported pixel shader output format');
+            }
+
             this.end();
         }
     }
@@ -284,7 +370,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
 
     protected emitVaryingOrAttribute(ctx: ContextT, decl: IVariableDeclInstruction) {
-        switch(ctx.mode) {
+        switch (ctx.mode) {
             case 'vs':
                 return this.emitAttribute(ctx, decl);
             case 'ps':
@@ -374,9 +460,10 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
         }
 
+        // todo: add correct samplers support (!)
         if (callee) {
             const type = callee.type;
-            if (/^Texture(2D|3D|1D)?(<[a-zA-Z0-9_]+>)?$/.test(type.name)) {
+            if (SystemScope.isTexture(type)) {
                 const id = callee as IIdExprInstruction;
                 this.emitGlobal(ctx, id.decl);
 
@@ -389,11 +476,11 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                     this.emitExpressionList(ctx, args.slice(1)); // remove sampler argument
                     this.emitChar(')');
                 }
-                
+
                 if (decl.name == 'GetDimensions') {
                     this.emitChar('{');
                     this.push();
- 
+
                     this.emitKeyword(`ivec2`);
                     this.emitKeyword(`temp`);
                     this.emitSpace();
@@ -411,7 +498,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                     this.emitChar(')');
                     this.emitChar(';');
                     this.emitNewline();
-                    
+
                     this.emitExpression(ctx, args[1]);
                     this.emitSpace();
                     this.emitChar(`=`);
@@ -430,10 +517,24 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                     this.emitChar('}');
                 }
                 return;
-            } 
+            }
         }
-        
-        super.emitFCall(ctx, call);
+
+        // super.emitFCall(ctx, call);
+        if (decl.instructionType !== EInstructionTypes.k_SystemFunctionDecl) {
+            this.emitFunction(ctx, decl);
+        }
+
+        if (callee) {
+            this.emitExpression(ctx, callee);
+            this.emitChar('.');
+            this.emitNoSpace();
+        }
+        this.emitKeyword(decl.name);
+        this.emitChar('(');
+        this.emitNoSpace();
+        this.emitExpressionListWithCast(ctx, args, decl.def.params.map(p => p.type));
+        this.emitChar(')');
     }
 
 
@@ -494,8 +595,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                 this.push();
                 const params = fn.def.params.filter(p => p.type.size !== 0);
                 {
-                    for (let p of params)
-                    {
+                    for (let p of params) {
                         const pname = p.name;
                         const { typeName } = this.resolveType(ctx, p.type);
 
@@ -506,7 +606,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
                         const fline = (decl: IVariableDeclInstruction, ids: string[]) => {
                             if (decl.type.isComplex() && !SystemScope.isBase(decl.type)) {
-                                decl.type.fields.forEach(field => fline(field, [ ...ids, decl.name ]));
+                                decl.type.fields.forEach(field => fline(field, [...ids, decl.name]));
                                 return;
                             }
                             for (let id of ids) {
@@ -519,7 +619,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                             this.emitChar('=');
                             if (IS_INSTANCEID(decl.semantic)) {
                                 this.emitKeyword('uint(gl_InstanceID)');
-                            } else if(IS_VERTEXID(decl.semantic)) {
+                            } else if (IS_VERTEXID(decl.semantic)) {
                                 this.emitKeyword('uint(gl_VertexID)');
                             } else {
                                 this.emitKeyword(this.attr(ctx, decl));
@@ -528,7 +628,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                             this.emitNewline();
                         }
 
-                        fline(p, [ ]);
+                        fline(p, []);
                     }
 
                     const tempName = 'temp';
@@ -557,7 +657,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
 
                             fline = (decl: IVariableDeclInstruction, ids: string[]) => {
                                 if (decl.type.isComplex() && !SystemScope.isBase(decl.type)) {
-                                    cdown(decl.type, [ ...ids, decl.name ]);
+                                    cdown(decl.type, [...ids, decl.name]);
                                     return;
                                 }
                                 this.emitKeyword(sname.varying(decl));
@@ -573,8 +673,8 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                                 this.emitNewline();
                             }
 
-                            cdown = (type: ITypeInstruction, ids: string[]) => type.fields.forEach(field => fline(field, ids)); 
-                            cdown(retType, [ tempName ]);
+                            cdown = (type: ITypeInstruction, ids: string[]) => type.fields.forEach(field => fline(field, ids));
+                            cdown(retType, [tempName]);
 
                         }
 
@@ -587,11 +687,22 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                         this.emitChar(';');
                         this.emitNewline();
                     } else { // ps
-                        this.emitKeyword('outColor');
-                        this.emitKeyword('=');
-                        this.emitKeyword(tempName);
-                        this.emitChar(';');
-                        this.emitNewline();
+                        if (types.equals(def.returnType, SystemScope.T_FLOAT4)) {
+                            this.emitKeyword('out_color');
+                            this.emitKeyword('=');
+                            this.emitKeyword(tempName);
+                            this.emitChar(';');
+                            this.emitNewline();
+                        } else if (def.returnType.isComplex()) {
+                            const ctype = def.returnType;
+                            for (const field of ctype.fields) {
+                                this.emitKeyword(`out_${field.name}`);
+                                this.emitKeyword('=');
+                                this.emitKeyword(`${tempName}.${field.name}`);
+                                this.emitChar(';');
+                                this.emitNewline();
+                            }
+                        }
                     }
                 }
                 this.pop();
@@ -604,7 +715,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         super.emitFunction(ctx, fn);
     }
 
-    
+
     //
     // intrinsics
     //

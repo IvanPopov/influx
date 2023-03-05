@@ -1,15 +1,21 @@
 import { ITechnique11 } from "@lib/idl/ITechnique11";
 import { ITechnique } from "@lib/idl/ITechnique";
+import * as VM from '@lib/fx/bytecode/VM';
 
 import { BundleT } from "@lib/idl/bundles/auto/fx/bundle";
 import { Technique11BundleT } from "@lib/idl/bundles/auto/technique11_generated";
 
 function createTechnique11FromBundle(bundle: BundleT): ITechnique11 {
     const { name, content } = bundle;
-    const { passes } = content as Technique11BundleT;
+    const tech11 = content as Technique11BundleT;
 
-    passes.map(({ code, shaders, shadersType }) => {
-        
+    const passes = tech11.passes.map(({ code, shaders, shadersType }, i) => {
+        const render = VM.make(`pass-${i}`, code);
+
+        return {
+            render,
+            shaders
+        };
     });
 
     const getName = () => <string>name;

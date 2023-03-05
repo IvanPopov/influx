@@ -1,49 +1,14 @@
-
-// export interface IAttribute {
-//     size: number;
-//     offset: number;
-//     name: string;
-// }
-
+import { IBundle } from "./bytecode";
 import { ITechnique } from "./ITechnique";
 
-
-// export enum EUsage {
-//     k_Vertex = 0x01,
-//     k_Pixel = 0x02,
-//     k_Compute = 0x04
-// };
-
-
-// export interface IConstanBufferField {
-//     name: string;
-//     semantic: string;
-//     size: number;
-//     padding: number;
-//     length: number;
-// }
-
-
-// export interface IConstantBuffer {
-//     slot: number;
-//     name: string;
-//     size: number;
-//     usage: number;
-//     fields: IConstanBufferField[];
-// }
-
+import { PixelShaderT } from "./bundles/auto/fx/pixel-shader";
+import { VertexShaderT } from "./bundles/auto/fx/vertex-shader";
 
 
 export interface ITechnique11RenderPass {
-    // instanceName: string;
-    // instanceLayout: IAttribute[];
-    // stride: number; // number of float elements in the prerendered particle (src)
-
-    // // GLSL shader's sources
-    // vertexShader: string;
-    // pixelShader: string;
-
-    // cbuffers: IConstantBuffer[];
+    render: IBundle;
+    // todo: do not use flatbuffers types (!)
+    shaders: (PixelShaderT | VertexShaderT)[];
 }
 
 

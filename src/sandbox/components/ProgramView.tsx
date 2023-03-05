@@ -7,6 +7,7 @@
 import { isArray, isDefAndNotNull, isNull } from '@lib/common';
 import { fn, instruction, types } from '@lib/fx/analisys/helpers';
 import { ComplexTypeInstruction } from '@lib/fx/analisys/instructions/ComplexTypeInstruction';
+import { EVariableUsageFlags } from '@lib/fx/analisys/instructions/VariableDeclInstruction';
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import {
     EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction,
@@ -526,11 +527,17 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
 
     VariableDecl(instr: IVariableDeclInstruction) {
         if (isNull(instr)) return null;
+        const isUniform = instr.isGlobal() && (!instr.type.isStatic() || instr.type.isUniform());
+        const icCbuffer = !!(instr.usageFlags & EVariableUsageFlags.k_Cbuffer);
         return (
             <Property { ...this.bindProps(instr) } value={ instr.name } >
                 <Property name='id' value={ instr.id.toString() } />
                 { instr.isConstant() && <Property name='constant' value={ 'true' } /> }
-                <Property name='semantic' value={ instr.semantic } />
+                { instr.isGlobal() && <Property name='global' value={ String(instr.isGlobal()) } /> }
+                { instr.isParameter() && <Property name='parameter' value={ String(instr.isParameter()) } /> }
+                { isUniform && <Property name='uniform' value={ String(isUniform) } /> }
+                { icCbuffer && <Property name='cbuffer' value={ String(icCbuffer) } /> }
+                <PropertyOpt name='semantic' value={ instr.semantic } />
                 <Property name='type' opened={ true }>
                     { this.VariableType(instr.type) }
                 </Property>
@@ -924,7 +931,9 @@ class ProgramView extends React.Component<IProgramViewProps, {}> {
     VariableType(instr: IVariableTypeInstruction) {
         return (
             <Property { ...this.bindProps(instr) }>
-                <PropertyOpt name='const' value={ `${instr.isConst()}` } />
+                { instr.isConst() && <PropertyOpt name='const' value={ `${instr.isConst()}` } /> }
+                { instr.isStatic() && <PropertyOpt name='static' value={ String(instr.isStatic()) } /> }
+                { instr.isUniform() && <PropertyOpt name='uniform' value={ String(instr.isUniform()) } /> }
                 <PropertyOpt name='usages' value={ (instr.usages.join(' ') || null) } />
                 <Property name='padding' value={ instr.padding === instruction.UNDEFINE_PADDING ? 'undef' : instr.padding } />
                 <Property name='aligment' value={ instr.aligment } />

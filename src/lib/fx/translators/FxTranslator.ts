@@ -1,18 +1,19 @@
-import { assert, isDef } from "@lib/common";
+import { assert, isDef, isString } from "@lib/common";
 import { types } from "@lib/fx/analisys/helpers";
 import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
 import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstruction";
-import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
-import { EInstructionTypes, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechnique11Instruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
-import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
-import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
+import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
+import { ControlValueType, PropertyValueType } from "@lib/fx/bundles/utils";
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
-import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
-import { ControlValueType, PropertyValueType } from "../bundles/utils";
+import { EInstructionTypes, ICompileShader11Instruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechnique11Instruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { Color, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
+import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
+import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
+import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
+import { visitor } from '@lib/fx/Visitors';
 
 export interface IViewTypeProperty {
     name: string;
@@ -285,6 +286,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     private static CS_PARTICLE_PRERENDER_SHADER = 'CSParticlesPrerenderShader';
 
 
+
     /*
         https://help.autodesk.com/view/MAXDEV/2023/ENU/?guid=shader_semantics_and_annotations
         https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
@@ -541,11 +543,46 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
 
     emitGlobalVariable(ctx: ContextT, decl: IVariableDeclInstruction) {
+        // same convolution as in CodeConvolutionEmitter::emitGlobalVariable()
+        // convolute here in order to no print variables from includes
+        if (this.convoluteToInclude(ctx, decl)) {
+            return;
+        }
+
+        const { type } = decl;
+
+        // trimesh use builtin check of context existance
+        // note: must be counted as ctx.addTrimesh() (not just ctx.add())
         if (this.isTrimesh(decl.type)) {
             this.emitTrimeshDecl(ctx, decl);
             return;
         }
 
+        // same check as in CodeEmitter::emitGlobalVariable();
+        if (ctx.has(decl.name)) {
+            return;
+        }
+        
+        if (this.addControl(ctx, decl)) {
+            this.emitControlVariable(ctx, decl);
+            ctx.add(decl.name);
+            return;
+        }
+
+        const isUniform = type.isUniform() || 
+            (!type.isStatic() && decl.isGlobal() && 
+                !SystemScope.isSamplerState(type) && 
+                !SystemScope.isBuffer(type) && 
+                !SystemScope.isUAV(type) &&
+                !SystemScope.isTexture(type));
+
+        if (isUniform) {
+            this.emitUniformVariable(ctx, decl);
+            ctx.add(decl.name);
+            return;
+        }
+
+        // fallback to stanalone printing
         super.emitGlobalVariable(ctx, decl);
     }
 
@@ -553,7 +590,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     protected emitControlVariable(ctx: ContextT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
         if (!ctx.opts.uiControlsGatherToDedicatedConstantBuffer) {
             // quick way to promote uniform qualifier to GLSL code
-            (this.emitKeyword('uniform'), this.emitVariableNoInit(ctx, decl, rename));
+            this.emitKeyword('uniform');
+            this.emitVariableNoInit(ctx, decl, rename);
+            this.emitChar(';');
         }
     }
 
@@ -571,9 +610,9 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
 
         if (!KNOWN_EXTERNAL_GLOBALS.includes(semantic)) {
-            super.emitVariable(ctx, decl);
+            // super.emitVariable(ctx, decl);
             console.warn(`Unsupported uniform has been used: ${decl.toCode()}.`);
-            return;
+            // return;
         }
 
         const isGlobal = true; // global update required
@@ -581,6 +620,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         if (!ctx.opts.globalUniformsGatherToDedicatedConstantBuffer && isGlobal) {
             super.emitVariable(ctx, decl);
+            this.emitChar(';');
             return;
         }
 
@@ -594,19 +634,10 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
 
     // todo: remove hack with rename mutator
-    emitVariable(ctx: ContextT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
-        if (this.addControl(ctx, decl)) {
-            this.emitControlVariable(ctx, decl, rename);
-            return;
-        }
-
-        if (decl.type.isUniform()) {
-            this.emitUniformVariable(ctx, decl);
-            return;
-        }
-
-        super.emitVariable(ctx, decl, rename);
-    }
+    // emitVariable(ctx: ContextT, decl: IVariableDeclInstruction, rename?: (decl: IVariableDeclInstruction) => string) {
+    //     const { type } = decl;
+    //     super.emitVariable(ctx, decl, rename);
+    // }
 
 
     emitTexture(ctx: ContextT, decl: IVariableDeclInstruction): void {
@@ -974,6 +1005,17 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         this.end();
 
         ctx.endCsShader();
+    }
+
+
+    protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
+        // all uniform parameters will be printed as global variables through their id
+        params
+            .filter(p => (!this.options.omitEmptyParams || p.type.size !== 0) && !p.type.isUniform())
+            .forEach((param, i, list) => {
+            this.emitParam(ctx, param);
+            (i + 1 != list.length) && this.emitChar(',');
+        });
     }
 
 
@@ -1389,11 +1431,11 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
 
     protected finalizeTechnique(ctx: ContextT) {
-        if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer) {
+        if (ctx.opts.globalUniformsGatherToDedicatedConstantBuffer && ctx.uniforms.length > 0) {
             const index = ctx.opts.globalUniformsConstantBufferRegister || -1;
 
             // check that no one uses the same register
-            for (let name in ctx.tech().scope.cbuffers) {
+            for (let name in ctx.tech()?.scope.cbuffers) {
                 let cbuf = ctx.tech().scope.cbuffers[name];
                 if (SystemScope.resolveRegister(cbuf).index === index) {
                     console.error(`register ${index} is already used by cbuffer '${cbuf.name}'`);
@@ -1443,11 +1485,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             this.end(true); // move to prologue
         }
 
-        if (ctx.opts.uiControlsGatherToDedicatedConstantBuffer) {
+        const uiControls = ctx.controls.filter(ctrl => !['texture2d', 'mesh'].includes(ctrl.type));
+        if (ctx.opts.uiControlsGatherToDedicatedConstantBuffer && uiControls.length > 0) {
             const index = ctx.opts.uiControlsConstantBufferRegister || -1;
 
             // check that no one uses the same register
-            for (let name in ctx.tech().scope.cbuffers) {
+            for (let name in ctx.tech()?.scope.cbuffers) {
                 let cbuf = ctx.tech().scope.cbuffers[name];
                 if (SystemScope.resolveRegister(cbuf).index === index) {
                     console.error(`register ${index} is already used by cbuffer '${cbuf.name}'`);
@@ -1474,9 +1517,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 this.emitChar('{');
                 this.push();
                 {
-                    ctx.controls.forEach(ctrl => {
-                        if (ctrl.type === 'texture2d') return;
-                        if (ctrl.type === 'mesh') return;
+                    uiControls.forEach(ctrl => {
                         this.emitKeyword(typeNameOfUIControl(ctrl));
                         this.emitKeyword(ctrl.name);
                         this.emitChar(';');
@@ -1643,6 +1684,26 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
         const { name } = tech;
 
+        for (const pass of tech.passes) {
+            visitor(pass, (instr: IInstruction, owner?: IInstruction) => {
+                if (instr.instructionType === EInstructionTypes.k_CompileShader11Expr) {
+                    const cmpl = instr as ICompileShader11Instruction;
+                    // const SH_TYPE = {
+                    //     'vs': 'VertexShader',
+                    //     'ps': 'PixelShader',
+                    //     'cs': 'ComputeShader',
+                    //     'gs': 'GeometryShader'
+                    // };
+                    // const ext = cmpl.ver.substring(0, 2);
+                    // const type = SH_TYPE[ext];
+                    // assert(isString(type), 'unknown type found');
+
+                    this.emitEntryFunction(ctx, cmpl.func);
+                }
+                // todo: add support of global defined shaders
+            });
+        }
+
         // emit global uniforms and so on.
         this.finalizeTechnique(ctx);
 
@@ -1691,28 +1752,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
     private static fxtTranslator = new FxTranslator({ omitEmptyParams: true }); 
 
-
-    static translate(fx: ITechniqueInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
-        switch (fx.instructionType) {
-            case EInstructionTypes.k_PartFxDecl:
-                FxTranslator.fxtTranslator.emitPartFxDecl(ctx, <IPartFxInstruction>fx);
-                break;
-            case EInstructionTypes.k_TechniqueDecl:
-                FxTranslator.fxtTranslator.emitTechniqueDecl(ctx, fx);
-                break;
-            default:
-                console.assert(false);
-        }
-        return FxTranslator.fxtTranslator.toString(ctx);
-    }
-
-    static translate11(fx: ITechnique11Instruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
-        FxTranslator.fxtTranslator.emitTechnique11Decl(ctx, fx);
-        return FxTranslator.fxtTranslator.toString(ctx);
-    }
-
-    static translateDebug(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
+    static translate(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
         FxTranslator.fxtTranslator.emit(ctx, instr);
+        // hack to print gathered buffers
+        if (instr.instructionType === EInstructionTypes.k_FunctionDecl) {
+            FxTranslator.fxtTranslator.finalizeTechnique(ctx);
+        }
         return FxTranslator.fxtTranslator.toString(ctx);
     }
 }

@@ -97,6 +97,11 @@ export class CodeConvolutionEmitter<ContextT extends CodeConvolutionContext> ext
             super.emitCbuffer(ctx, cbuf);
     }
 
+    emitTexture(ctx: ContextT, decl: IVariableDeclInstruction) {
+        if (!this.convoluteToInclude(ctx, decl))
+            super.emitTexture(ctx, decl);
+    }
+
     toString(ctx?: ContextT): string {
         const code = super.toString();
         if (!ctx) {

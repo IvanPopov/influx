@@ -19,8 +19,8 @@ import { ISLDocument } from '@lib/idl/ISLDocument';
 import { IFile, IParseNode, IRange } from "@lib/idl/parser/IParser";
 import { Diagnostics } from '@lib/util/Diagnostics';
 import { isNumber } from '@lib/util/s3d/type';
-import { AnalyzerDiagnostics } from '../AnalyzerDiagnostics';
-import { visitor } from '../Visitors';
+import { AnalyzerDiagnostics } from '@lib/fx/AnalyzerDiagnostics';
+import { visitor } from '@lib/fx/Visitors';
 import { expression, instruction, types } from './helpers';
 import { AnnotationInstruction } from './instructions/AnnotationInstruction';
 import { ArithmeticExprInstruction } from './instructions/ArithmeticExprInstruction';
@@ -52,6 +52,7 @@ import { Instruction } from './instructions/Instruction';
 import { InstructionCollector } from './instructions/InstructionCollector';
 import { IntInstruction } from './instructions/IntInstruction';
 import { LogicalExprInstruction } from './instructions/LogicalExprInstruction';
+import { NullInstruction } from './instructions/NullInstruction';
 import { PassInstruction } from './instructions/PassInstruction';
 import { PostfixArithmeticInstruction, PostfixOperator } from './instructions/PostfixArithmeticInstruction';
 import { PostfixIndexInstruction } from './instructions/PostfixIndexInstruction';
@@ -108,6 +109,11 @@ const asRelaxedType = (instr: ITypedInstruction | ITypeInstruction): ITypeInstru
     //          ^^^^^^^^^^^^^^^^^^^^^^^^^^
     //          hacky way to check if "type" instruction (not "typed")
 
+    // hack to NULL expression to any type
+    if (types.equals(type, SystemScope.T_NULL)) {
+        return /^.*$/;
+    }
+
     // allow "int" => "float" substitution
     if (SystemScope.isIntBasedType(type) || SystemScope.isUintBasedType(type) || SystemScope.isBoolBasedType(type)) {
         // temp workaround in order to match int to uint and etc. 
@@ -128,7 +134,7 @@ function tryResolveProxyType(type: IVariableTypeInstruction, host: ITypeInstruct
     }
 }
 
-
+/** @deprecated */
 function getRenderStateValue(state: ERenderStates, value: string): ERenderStateValues {
     let eValue: ERenderStateValues = ERenderStateValues.UNDEF;
 
@@ -1004,12 +1010,13 @@ export class Analyzer {
             }
         }
 
-        const usageIn = usagesRaw.indexOf('in') !== -1;
-        const usageOut = usagesRaw.indexOf('out') !== -1;
-        const usageInout = usagesRaw.indexOf('inout') !== -1;
-        const usageConst = usagesRaw.indexOf('const') !== -1;
-        const usageUniform = usagesRaw.indexOf('uniform') !== -1;
-        const usageUnsigned = usagesRaw.indexOf('unsigned') !== -1;
+        const usageIn = usagesRaw.includes('in');
+        const usageOut = usagesRaw.includes('out');
+        const usageInout = usagesRaw.includes('inout');
+        const usageConst = usagesRaw.includes('const');
+        const usageUniform = usagesRaw.includes('uniform');
+        const usageUnsigned = usagesRaw.includes('unsigned');
+        const usageStatic = usagesRaw.includes('static');
 
         // TODO: emit errors in case of inconsistent usages
         // TODO: remplace with bitflags
@@ -1036,6 +1043,10 @@ export class Analyzer {
                     if (usageUniform) usages.push('uniform');
                 }
             }
+        }
+
+        if (usageStatic) {
+            usages.push('static');
         }
 
         if (usageUnsigned && !SystemScope.isIntBasedType(type)) {
@@ -1293,7 +1304,9 @@ export class Analyzer {
         let usageFlags = 0;
 
         if (!context.func) {
-            usageFlags |= EVariableUsageFlags.k_Global;
+            if (scope.type !== EScopeType.k_Struct) {
+                usageFlags |= EVariableUsageFlags.k_Global;
+            }
             if (context.cbuffer) {
                 usageFlags |= EVariableUsageFlags.k_Cbuffer;
             }
@@ -2733,8 +2746,9 @@ export class Analyzer {
 
         // explicit support of built in HLSL 'NULL' define
         if (name === 'NULL') {
-            const { base, signed, heximal, exp } = parseUintLiteral('0');
-            return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal }); 
+            // const { base, signed, heximal, exp } = parseUintLiteral('0');
+            // return new IntInstruction({ scope, sourceNode, base, exp, signed, heximal }); 
+            return new NullInstruction({ scope, sourceNode });
         }
 
         const decl = scope.findVariable(name);

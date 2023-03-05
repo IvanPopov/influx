@@ -25,7 +25,7 @@ export function parseUintLiteral(value: string) {
     const signed = match[5].toLowerCase().indexOf('u') === -1;
     const exp = Number(match[4] || '0');
     const base = Number(match[2]);
-    assert(base !== NaN);
+    assert(!Number.isNaN(base));
 
     const heximal = value[1] === 'x';
 
@@ -394,6 +394,15 @@ export const BLEND_STATE = 'BlendState';
 export const DEPTH_STENCIL_STATE = 'DepthStencilState';
 export const RASTERIZER_STATE = 'RasterizerState';
 
+export const SHADER_TYPES = [
+    'VertexShader',
+    'PixelShader',
+    'GeometryShader',
+    'HullShader',
+    'DomainShader',
+    'ComputeShader'
+];
+
 const skipTemplate = (name: string) => name.match(/([\w][\w\d]+)(<[\w][\w\d]+>)?/)[1];
 // note: arrays like "Texture2D[5]" also return true in this checks (!)
 export const isUAV = (type: ITypeInstruction) => UAV_TYPES.includes(skipTemplate(type.name));
@@ -412,6 +421,8 @@ export const isPipelineState = (type: ITypeInstruction) => [
     DEPTH_STENCIL_STATE,
     RASTERIZER_STATE
 ].includes(type.name);
+
+export const isShaderType = (type: ITypeInstruction) => SHADER_TYPES.includes(types.signature(type));
 
 // note: arrays like "float4[4]" return false in this checks (!)
 export const isBase = (type: ITypeInstruction) => BASE_TYPES.includes(types.signature(type));

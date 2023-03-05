@@ -2,12 +2,13 @@ import * as Autotests from '@lib/fx/autotests';
 /* tslint:disable:max-func-body-length */
 /* tslint:disable:typedef */
 /* tslint:disable:no-single-line-block-comment */
+import { visitor } from '@lib/fx/Visitors';
 import * as ScopeUtils from '@lib/fx/analisys/system/utils';
 import { SCOPE } from '@lib/fx/analisys/SystemScope';
 import * as Bytecode from '@lib/fx/bytecode';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { FxEmitter } from '@lib/fx/translators/FxEmitter';
-import { IInstruction } from '@lib/idl/IInstruction';
+import { EInstructionTypes, ICompileShader11Instruction, IInstruction } from '@lib/idl/IInstruction';
 import { IParseNode, IRange } from '@lib/idl/parser/IParser';
 import * as p4 from '@lib/util/p4/p4';
 import { depot as depotActions, mapActions, nodes as nodesActions, playground as playgroundActions, sourceCode as sourceActions } from '@sandbox/actions';
@@ -26,7 +27,7 @@ import Playground from '@sandbox/containers/playground/Playground';
 import ShaderTranslatorView from '@sandbox/containers/ShaderTranslatorView';
 import { AST_VIEW, BYTECODE_VIEW, CODE_KEYWORD, DEFAULT_FILENAME, EXT_FILTER, GRAPH_KEYWORD, GRAPH_VIEW, PLAYGROUND_VIEW, PREPROCESSOR_VIEW, PROGRAM_VIEW, RAW_KEYWORD } from '@sandbox/logic/common';
 import { getCommon, mapProps } from '@sandbox/reducers';
-import { filterTechniques } from '@sandbox/reducers/playground';
+import { filterTechniques, filterTechniques11 } from '@sandbox/reducers/playground';
 import { history } from '@sandbox/reducers/router';
 import { getFileState, getRawContent, getScope } from '@sandbox/reducers/sourceFile';
 import IStoreState, { IP4Info, IPlaygroundState } from '@sandbox/store/IStoreState';
@@ -45,6 +46,8 @@ import { connect } from 'react-redux';
 import { matchPath, Route, RouteComponentProps, Switch, withRouter } from 'react-router';
 import { SemanticToastContainer } from 'react-semantic-toasts';
 import { Button, Checkbox, Container, Dropdown, DropdownItemProps, Form, Grid, Header, Icon, Input, Loader, Menu, Message, Modal, Popup, Segment, Sidebar, Tab, Table } from 'semantic-ui-react';
+import { assert, isString } from '@lib/common';
+import ShaderTranslatorView11 from './ShaderTranslatorView11';
 
 type UnknownIcon = any;
 
@@ -758,17 +761,20 @@ class App extends React.Component<IAppProps> {
     // Render processing
     //
 
+    /** @deprecated */
     buildShaderMenu(): { name: string; link: string }[] {
         const props = this.props;
         const file = getFileState(props);
-        const list = filterTechniques(getScope(file));
-
+        
         if (!file.uri) {
             return [];
         }
-
+        
         const links: string[] = [];
         const basepath = `/playground/${encodeURIComponent(file.uri)}`;
+
+        const scope = getScope(file);
+        const list = filterTechniques(scope);
         for (const fx of list) {
             links.push(`${fx.name}`);
             links.push(...fx.passes
@@ -778,6 +784,53 @@ class App extends React.Component<IAppProps> {
                 .filter(pass => !!pass.pixelShader)
                 .map((pass, i) => `${fx.name}/${pass.name || i}/PixelShader`));
         }
+        
+        return links.map(name => ({ name, basepath, link: `${basepath}/${name}` }));
+    }
+
+
+    buildShaderMenu11(): { name: string; link: string }[] {
+        const props = this.props;
+        const file = getFileState(props);
+        
+        if (!file.uri) {
+            return [];
+        }
+        
+        const links: string[] = [];
+        const basepath = `/playground/${encodeURIComponent(file.uri)}`;
+
+        const scope = getScope(file);
+        const list11 = filterTechniques11(scope);
+        const knownShaders = [];
+        for (const fx of list11) {
+            links.push(`${fx.name}`);
+            for (const pass of fx.passes) {
+                visitor(pass, (instr: IInstruction, owner?: IInstruction) => {
+                    if (instr.instructionType === EInstructionTypes.k_CompileShader11Expr) {
+                        const cmpl = instr as ICompileShader11Instruction;
+                        const SH_TYPE = {
+                            'vs': 'VertexShader',
+                            'ps': 'PixelShader',
+                            'cs': 'ComputeShader',
+                            'gs': 'GeometryShader'
+                        };
+                        const ext = cmpl.ver.substring(0, 2);
+                        const type = SH_TYPE[ext];
+                        assert(isString(type), 'unknown type found');
+
+                        const link = `${cmpl.func.name}/${type}`;
+                        if (!knownShaders.includes(link)) {
+                            knownShaders.push(link);
+                        }
+                    }
+                    // todo: add support of global defined shaders
+                });
+
+            }
+        }
+        links.push(...knownShaders);
+        
         return links.map(name => ({ name, basepath, link: `${basepath}/${name}` }));
     }
 
@@ -794,6 +847,10 @@ class App extends React.Component<IAppProps> {
         ]
 
         const showAutotestMenu = (sourceFile.content || '').substr(0, 40).indexOf('@autotests') !== -1;
+
+        /** @deprecated */
+        const shaderMenuList = this.buildShaderMenu();
+        const shaderMenuList11 = this.buildShaderMenu11();
 
         const analysisResults = [
             {
@@ -817,9 +874,23 @@ class App extends React.Component<IAppProps> {
                                             </Dropdown.Menu>
                                         </Dropdown>
                                     </Dropdown.Item>
-                                    <Dropdown.Divider />
+                                    { shaderMenuList.length > 0 && 
+                                        <Dropdown.Divider />
+                                    }
                                     {
-                                        this.buildShaderMenu().map(item => (
+                                        shaderMenuList.map(item => (
+                                            <Dropdown.Item
+                                                key={`ddmi-${item.name}`}
+                                                href={`#${item.link}`} >
+                                                {item.name}
+                                            </Dropdown.Item>
+                                        ))
+                                    }
+                                    { shaderMenuList11.length > 0 && 
+                                        <Dropdown.Divider />
+                                    }
+                                    {
+                                        shaderMenuList11.map(item => (
                                             <Dropdown.Item
                                                 key={`ddmi-${item.name}`}
                                                 href={`#${item.link}`} >
@@ -1131,6 +1202,9 @@ class App extends React.Component<IAppProps> {
                                         </Route>
                                         <Route path={`/${PLAYGROUND_VIEW}/:fx/:name/:pass/(vertexshader|pixelshader)`}>
                                             <ShaderTranslatorView name='shader-translator-view' />
+                                        </Route>
+                                        <Route path={`/${PLAYGROUND_VIEW}/:fx/:name/(vertexshader|pixelshader)`}>
+                                            <ShaderTranslatorView11 name='shader-translator-view' />
                                         </Route>
                                         <Route path={`/${PLAYGROUND_VIEW}/:fx/:name`}>
                                             <ShaderTranslatorView name='shader-translator-view' />

@@ -2,9 +2,8 @@ import { assert } from "@lib/common";
 import * as Bytecode from "@lib/fx/bytecode/Bytecode";
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import * as TSVM from "@lib/fx/bytecode/VM/ts/bundle";
-import { CodeConvolutionContext, CodeConvolutionEmitter } from '@lib/fx/translators/CodeConvolutionEmitter';
 import { CodeContextMode } from "@lib/fx/translators/CodeEmitter";
-import { IFxContextExOptions } from "@lib/fx/translators/FxTranslator";
+import { FxTranslator, FxTranslatorContext, IFxContextExOptions } from "@lib/fx/translators/FxTranslator";
 import { EChunkType } from "@lib/idl/bytecode";
 import { ITechnique11Instruction } from "@lib/idl/IInstruction";
 import { isDef } from "@lib/util/s3d/type";
@@ -23,6 +22,12 @@ import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11rend
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
 import { CBBundleT, PixelShaderT, VertexShaderT } from "@lib/idl/bundles/auto/technique11_generated";
 import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
+import { createTextDocument } from "../TextDocument";
+import { createSLASTDocument } from "../SLASTDocument";
+import { createSLDocument } from "../SLDocument";
+import { Diagnostics } from "@lib/util/Diagnostics";
+import { CodeConvolutionContext, CodeConvolutionEmitter } from "../translators/CodeConvolutionEmitter";
+import { ISLDocument } from "@lib/idl/ISLDocument";
 
 
 export interface Bundle11Options {
@@ -64,10 +69,19 @@ function finalizeBundle(bundle: BundleT, opts: Bundle11Options = {}): Uint8Array
 }
 
 
-// import { createSLASTDocument } from "@lib/fx/SLASTDocument";
+function translateTechnique(tech: ITechnique11Instruction, translator: IFxContextExOptions, 
+    convPack: ConvolutionPackEx) {
+    console.info(`compile technique <${tech.name}>`);
+    // translate technique to raw HLSL code in order to get merged global & local
+    // constant buffers and broken down fx types
+    const ctx = new FxTranslatorContext({ ...translator, ...convPack });
+    return FxTranslator.translate(tech, ctx);
+}
 
-async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bundle11Options = {}, convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
 
+async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bundle11Options = {}, 
+    convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
+    const codeRaw = translateTechnique(tech, opts.translator, convPack);
     const passes: Technique11RenderPassT[] = [];
     for (const pass11 of tech.passes) {
         const { program } = Bytecode.translate(pass11);
@@ -88,17 +102,34 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
 
                 // it's assumed that all the shaders places in the same scope for now
                 // (near the technique it'self in other words - not imported)
-                const scope = tech.scope;
-                const entryFn = scope.findFunction(name, null);
                 
-                const params = entryFn.def.params;
-                assert(args.every((_, i) => [ ...params ].reverse()[i].type.name === [ ...args ].reverse()[i].type), 
-                    'entry function doesn\'t match uniform arguments');
-                
+                {
+                    const scope = tech.scope;
+                    const entryFn = scope.findFunction(name, null);
+                    const params = entryFn.def.params;
+                    assert(args.every((_, i) => [ ...params ].reverse()[i].type.name === [ ...args ].reverse()[i].type), 
+                        'entry function doesn\'t match uniform arguments');
+                }
+
                 const mode = <CodeContextMode>ver.substring(0, 2);
                 assert(['vs', 'ps', 'gs'].includes(mode), `invalid mode: "${mode}"`);
 
-                const ctx = new CodeConvolutionContext({ ...convPack, mode });
+                // translate per shader in order to extract precise reflection
+                const textDocument = await createTextDocument(`file://${tech.name}///${name}.fx`, codeRaw);
+                const slastDocument = await createSLASTDocument(textDocument, convPack);
+                const slDocument = await createSLDocument(slastDocument);
+
+                const convPackSh = new ConvolutionPackEx(textDocument, slastDocument, 
+                    convPack.includeResolver, convPack.defines);
+            
+                if (slDocument.diagnosticReport.errors) {
+                    console.error(Diagnostics.stringify(slDocument.diagnosticReport));
+                    return null;
+                }
+
+                const scope = slDocument.root.scope;
+                const entryFn = scope.findFunction(name, null);
+                const ctx = new CodeConvolutionContext({ ...convPackSh, mode });
                 const sourceCode = CodeConvolutionEmitter.translate(entryFn, ctx);
 
                 const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -133,17 +164,6 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
 
                 shaderTypes.push(shaderType);
                 shaders.push(shader);
-
-                // console.log(sourceCode);
-
-                // {
-                //     const textDocument = await createTextDocument('://raw', sourceCode);
-                //     const slDocument = await createSLDocument(textDocument);
-                //     const scope = slDocument.root.scope;
-                //     const ctx = new GLSLContext({ mode: 'vs' });
-                //     const codeGLSL = GLSLEmitter.translate(scope.findFunction(name, null), ctx); // raw hlsl
-                //     console.log(codeGLSL);
-                // }
             }
         }
 
