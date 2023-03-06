@@ -2,7 +2,9 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 
 import { ERenderStates } from '@lib/idl/ERenderStates';
 import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
+import { IMap } from '@lib/idl/IMap';
 import { ITechnique9 } from '@lib/idl/ITechnique9';
+import { IPlaygroundControlsState } from '@sandbox/store/IStoreState';
 import * as THREE from 'three';
 import HDRScene from './HDRScene';
 import { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
@@ -10,7 +12,6 @@ import { Deps } from './utils/deps';
 import { GroupedUniforms } from './utils/GroupedUniforms';
 import { GuiView } from './utils/gui';
 import { SingleUniforms } from './utils/SingleUniforms';
-import { IPlaygroundControlsState } from '@sandbox/store/IStoreState';
 
 
 interface IProps extends ITreeSceneProps {
@@ -30,7 +31,7 @@ class Technique9Scene extends HDRScene<IProps, IState> {
 
     protected gui = new GuiView;
     protected uniformGroups: GroupedUniforms = new GroupedUniforms;
-    protected uniforms: SingleUniforms = new SingleUniforms;
+    protected uniforms: IMap<THREE.IUniform>;
     protected deps = new Deps;
 
     constructor(props) {
@@ -104,10 +105,11 @@ class Technique9Scene extends HDRScene<IProps, IState> {
             this.reloadModel();
         });
 
-        this.uniforms.create(this.props.controls, this.deps);
+        this.uniforms = SingleUniforms.create(this.props.controls, this.deps);
         this.uniformGroups.create9(this.props.material);
 
         this.reloadModel();
+        this.start();
     }
 
 
@@ -146,7 +148,7 @@ class Technique9Scene extends HDRScene<IProps, IState> {
         for (let p = 0; p < this.props.material.getPassCount(); ++p) {
             const group = groups[p];
             const { vertexShader, pixelShader, renderStates } = this.props.material.getPass(p).getDesc();
-            const uniforms = this.uniforms.data();
+            const uniforms = this.uniforms;
 
             const material = new THREE.RawShaderMaterial({
                 uniforms,
@@ -209,7 +211,7 @@ class Technique9Scene extends HDRScene<IProps, IState> {
         const { timeline, controls, material } = this.props;
         const { deps, camera, mount } = this;
 
-        this.uniforms.update(controls, timeline, deps);
+        SingleUniforms.update(controls, timeline, deps, this.uniforms);
         this.uniformGroups.update9(camera, mount, controls, timeline, deps, material);
 
         super.beginFrame();

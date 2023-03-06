@@ -1,30 +1,85 @@
 import { ITimeline } from "@lib/fx/timeline";
-import { IConstantBuffer, ITechnique9 } from "@lib/idl/ITechnique9";
+import { IConstanBufferField, IConstantBuffer, ITechnique9 } from "@lib/idl/ITechnique9";
 import { IPlaygroundControlsState } from "@sandbox/store/IStoreState";
 import * as THREE from 'three';
 import { IDeps } from "./deps";
-import { controlToThreeValue, storeThreeValue } from "./controls";
+import { controlValueToThreeValue, typedNumberToF32Num } from "./controls";
+import { AUTOGEN_CONTROLS, AUTOGEN_GLOBALS } from "@lib/fx/translators/FxTranslator";
 
 interface IViewport {
     clientWidth: number;
     clientHeight: number;
 }
 
-function copyMat4x4(uniforms: THREE.Uniform[], offset: number, mat: THREE.Matrix4) {
-    const pos = (offset / 16) >>> 0; // in vector
-    (uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
-    (uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
-    (uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
-    (uniforms[pos + 3].value as THREE.Vector4).fromArray(mat.elements, 12);
+function copyVec4({ padding }: IConstanBufferField, v: THREE.Vector4, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0; // in vector
+    const pad = (padding % 16) / 4;
+    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(v.toArray(), 0);
+}
+
+function copyVec3({ padding }: IConstanBufferField, src: THREE.Vector3, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0; // in vector
+    const pad = (padding % 16) / 4;
+    const dst = group.uniforms[pos + 0].value as THREE.Vector4;
+    src.toArray().forEach((x, i) => dst.setComponent(pad + i, x));
+}
+
+function copyVec2({ padding }: IConstanBufferField, { x, y }: THREE.Vector2, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0; // in vector
+    const pad = (padding % 16) / 4;
+    console.assert(pad == 0, 'non zero paddings are not supported');
+    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([x, y], 0);
+}
+
+function copyMat4x4({ padding }: IConstanBufferField, mat: THREE.Matrix4, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0; // in vector
+    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
+    (group.uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
+    (group.uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
+    (group.uniforms[pos + 3].value as THREE.Vector4).fromArray(mat.elements, 12);
 }
 
 
-function copyMat4x3(uniforms: THREE.Uniform[], offset: number, mat: THREE.Matrix4) {
-    const pos = (offset / 16) >>> 0; // in vector
-    (uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
-    (uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
-    (uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
+function copyMat4x3({ padding }: IConstanBufferField, mat: THREE.Matrix4, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0; // in vector
+    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray(mat.elements, 0);
+    (group.uniforms[pos + 1].value as THREE.Vector4).fromArray(mat.elements, 4);
+    (group.uniforms[pos + 2].value as THREE.Vector4).fromArray(mat.elements, 8);
 }
+
+/** Write constan buffer entry to uniform group. */
+function copyControl(
+    state: IPlaygroundControlsState,
+    field: IConstanBufferField,
+    i: number,
+    deps: IDeps,
+    group: THREE.UniformsGroup) {
+    const name = `${field.name}${i >= 0 ? `[${i}]` : ``}`;
+    let offset = 0;
+    if (field.length != -1) {
+        const step = (field.size / field.length) >>> 0;
+        console.assert(step * field.length === field.size, 'padding?!');
+        offset = step * i;
+    }
+    const pos = ((field.padding + offset) / 16) >>> 0;
+    const pad = ((field.padding + offset) % 16) / 4;
+
+    const ctrl = state.controls[name];
+    const val = state.values[name];
+    if (['uint', 'int', 'uint', 'float'].indexOf(ctrl.type) !== -1) {
+        const f32Num = typedNumberToF32Num(controlValueToThreeValue(val, ctrl.type, deps) as number, ctrl.type);
+        (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, f32Num);
+    } else {
+        group.uniforms[pos].value = controlValueToThreeValue(val, ctrl.type, deps);
+    }
+}
+
+function copyFloat32({ padding }: IConstanBufferField, value: number, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0;
+    const pad = (padding % 16) / 4;
+    (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, value);
+}
+
 
 function transpose(mat: THREE.Matrix4): THREE.Matrix4 {
     return (new THREE.Matrix4).copy(mat).transpose();
@@ -79,7 +134,6 @@ export class GroupedUniforms {
         deps: IDeps,
         tech9: ITechnique9
     ): void {
-        const cbuffers: IConstantBuffer[][] = [];
         for (let iPass = 0; iPass < tech9.getPassCount(); ++iPass) {
             const cbuffers = tech9.getPass(iPass).getDesc().cbuffers;
             const groups = this.uniformGroups[iPass];
@@ -87,7 +141,7 @@ export class GroupedUniforms {
         }
     }
 
-    
+
     static update(
         camera: THREE.PerspectiveCamera,
         viewport: IViewport,
@@ -113,6 +167,7 @@ export class GroupedUniforms {
         const viewMatrix = (new THREE.Matrix4).copy(camera.matrixWorldInverse);
         const projMatrix = (new THREE.Matrix4).copy(camera.projectionMatrix);
         const modelViewMatrix = (new THREE.Matrix4).multiplyMatrices(viewMatrix, modelMatrix);
+        const modelViewProjMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, modelViewMatrix);
         const viewProjMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix);
 
         const { clientWidth, clientHeight } = viewport;
@@ -124,71 +179,74 @@ export class GroupedUniforms {
             let { name, size, usage } = cbuf;
 
             switch (name) {
-                case 'AUTOGEN_CONTROLS':
+                case AUTOGEN_CONTROLS:
                     {
-                        for (let { name, padding } of cbuf.fields) {
-                            const pos = (padding / 16) >>> 0;
-                            const pad = (padding % 16) / 4;
-                            const ctrl = controls.controls[name];
-                            const val = controls.values[name];
-                            if (['int', 'uint', 'float'].indexOf(ctrl.type) !== -1) {
-                                const num = storeThreeValue(controlToThreeValue(val, ctrl.type, deps) as number, ctrl.type);
-                                (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, num);
+
+                        for (let field of cbuf.fields) {
+                            if (field.length == -1) {
+                                copyControl(controls, field, -1, deps, group);
                             } else {
-                                group.uniforms[pos].value = controlToThreeValue(val, ctrl.type, deps);
+                                for (let i = 0; i < field.length; ++i) {
+                                    copyControl(controls, field, i, deps, group);
+                                }
                             }
                         }
                     }
                     break;
-                case 'GLOBAL_UNIFORMS':
-                    for (let { name, padding, semantic } of cbuf.fields) {
-                        switch (semantic) {
+                case AUTOGEN_GLOBALS:
+                    for (let field of cbuf.fields) {
+                        switch (field.semantic) {
                             case 'ELAPSED_TIME_LEVEL':
-                                {
-                                    const pos = (padding / 16) >>> 0;
-                                    const pad = (padding % 16) / 4;
-                                    (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTimeLevel);
-                                }
+                                copyFloat32(field, constants.elapsedTimeLevel, group);
                                 break;
                             case 'ELAPSED_TIME':
-                                {
-                                    const pos = (padding / 16) >>> 0;
-                                    const pad = (padding % 16) / 4;
-                                    (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, constants.elapsedTime);
-                                }
+                                copyFloat32(field, constants.elapsedTime, group);
                                 break;
+                            case 'FRAME_NUMBER':
+                                copyFloat32(field, constants.frameNumber, group);
+                                break;
+                            // todo: move to locals
                             case 'MODEL_MATRIX':
-                                copyMat4x4(group.uniforms, padding, modelMatrix);
+                                copyMat4x4(field, modelMatrix, group);
                                 break;
+                            // todo: move to locals
                             case 'MODEL_VIEW_MATRIX':
-                                copyMat4x4(group.uniforms, padding, modelViewMatrix);
+                                copyMat4x4(field, modelViewMatrix, group);
+                                break;
+                            case 'MODEL_VIEW_PROJECTION_MATRIX':
+                                // TODO: fixme me, the only one user is technique11.fx at the moment (!)
+                                copyMat4x4(field, transpose(modelViewProjMatrix), group);
                                 break;
                             case 'VIEW_MATRIX':
-                                copyMat4x4(group.uniforms, padding, viewMatrix);
+                                copyMat4x4(field, viewMatrix, group);
                                 break;
                             case 'PROJECTION_MATRIX':
-                                copyMat4x4(group.uniforms, padding, projMatrix);
+                                copyMat4x4(field, projMatrix, group);
+                                break;
+                            case 'CAMERA_POSITION':
+                                copyVec3(field, camera.position, group);
                                 break;
                             default:
-                                // console.error(`GLOBAL_UNIFORMS: unknown semantic <${semantic}> found.`);
+                                // todo: emit once (!)
+                                console.error(`GLOBAL_UNIFORMS: unknown semantic <${field.semantic}> found.`);
                         }
                     }
                     break;
                 default:
-                    for (let { name, padding, semantic } of cbuf.fields) {
-                        switch (semantic) {
+                    for (let field of cbuf.fields) {
+                        switch (field.semantic) {
                             case 'COMMON_VIEWPROJ_MATRIX':
                                 // note: husky uses transposed matrices (!)
-                                copyMat4x4(group.uniforms, padding, transpose(viewProjMatrix));
+                                copyMat4x4(field, transpose(viewProjMatrix), group);
                                 break;
                             case 'COMMON_VP_PARAMS':
                                 {
-                                    const pos = (padding / 16) >>> 0; // in vector
+                                    const pos = (field.padding / 16) >>> 0; // in vector
                                     (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight]);
                                 }
                                 break;
                             case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':
-                                copyMat4x3(group.uniforms, padding, identityMatrix);
+                                copyMat4x3(field, identityMatrix, group);
                                 break;
                         }
                     }

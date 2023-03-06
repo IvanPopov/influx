@@ -8,6 +8,8 @@ import { IMap } from '@lib/idl/IMap';
 import { ITechnique11, ITechnique11RenderPass } from '@lib/idl/ITechnique11';
 import { EUsage, IConstantBuffer } from "@lib/idl/ITechnique9";
 import { IPlaygroundControlsState } from '@sandbox/store/IStoreState';
+import React from 'react';
+import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import HDRScene from './HDRScene';
@@ -15,12 +17,11 @@ import { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import { Deps } from './utils/deps';
 import { GroupedUniforms } from './utils/GroupedUniforms';
 import { GuiView } from './utils/gui';
+import { SingleUniforms } from './utils/SingleUniforms';
 
 import { CBBundleT } from '@lib/idl/bundles/auto/cbbundle';
 import { PixelShaderT } from '@lib/idl/bundles/auto/fx/pixel-shader';
 import { VertexShaderT } from '@lib/idl/bundles/auto/fx/vertex-shader';
-import React from 'react';
-import { Progress } from 'semantic-ui-react';
 
 
 interface IProps extends ITreeSceneProps {
@@ -71,7 +72,8 @@ interface IPso {
 function calcPsoHash(pso: IPso): number {
     const dss = pso.depthStencilState;
     return crc32(
-        `${pso.vs?.name}:${pso.ps?.name}:` + 
+        `${pso.vs?.name}:${pso.vs?.args.map(a => `${a.value}`)}:` + 
+        `${pso.ps?.name}:${pso.ps?.args.map(a => `${a.value}`)}:` + 
         `${dss?.DepthEnable}:${dss?.DepthFunc}:${dss?.DepthWriteMask}`
     );
 }
@@ -134,10 +136,10 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         depthStencilState: null
     };
 
-    shaders: IMap<string> = {};                    // by shader name (original entry name)
     materials: IMap<THREE.RawShaderMaterial> = {}; // by pso hash
     cbuffers: IMap<IConstantBuffer[]> = {};        // by pso hash
     uniformGroups: IMap<THREE.UniformsGroup[]> = {}
+    uniforms: IMap<IMap<THREE.IUniform>> = {};
 
     gui = new GuiView;
     deps = new Deps;
@@ -256,17 +258,23 @@ class Technique11Scene extends HDRScene<IProps, IState> {
 
     async componentDidMount() {
         super.componentDidMount();
-
+        
         this.gui.mount(this.mount);
-        this.gui.create(this.props.controls);
-
+        
         // hack
         this.hdrControls.add(this.params, 'model', ['probe', 'cube', 'plane']).onChange((value) => {
             this.reloadModel();
         });
-
+        
         this.reloadModel();
         this.bindTechnique(this.props.technique);
+
+        const controls = this.props.controls;
+        const doLoadTexture = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
+        const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
+        this.deps.resolve(doLoadTexture, doLoadMeshes);
+
+        this.start();
     }
 
 
@@ -279,8 +287,6 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         super.componentDidUpdate?.(prevProps, prevState);
 
         const props = this.props;
-        this.gui.create(props.controls);;
-
         const passNum = props.technique.getPassCount();;
 
         this.scene.remove(...this.groups);
@@ -299,11 +305,6 @@ class Technique11Scene extends HDRScene<IProps, IState> {
     }
 
     protected async precompileShader(csh: IShader, shaders: (PixelShaderT | VertexShaderT)[]): Promise<string> {
-        let code = this.shaders[csh.name];
-        if (code) {
-            return code;
-        }
-
         const sh = shaders.find(sh => sh.entryName == csh.name);
         console.assert(sh, 'cannot find requested shader ?!');
 
@@ -314,7 +315,6 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         const codeGLSL = GLSLEmitter.translate(scope.findFunction(csh.name, null), ctx);
         // console.log(sh.code);
         // console.log(codeGLSL);
-        this.shaders[csh.name] = codeGLSL;
         return codeGLSL;
     }
 
@@ -351,6 +351,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
 
                 const cbuffers = Object.values(cbufs);
                 const ugroups = GroupedUniforms.create(cbuffers);
+                const uniforms = SingleUniforms.create(controls, deps);
                 
                 const vertexShader = await this.precompileShader(vs, shaders);
                 const fragmentShader = await this.precompileShader(ps, shaders);
@@ -358,6 +359,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
                     vertexShader,
                     fragmentShader,
 
+                    uniforms,
                     blending: THREE.NormalBlending,
                     transparent: false,
 
@@ -371,16 +373,25 @@ class Technique11Scene extends HDRScene<IProps, IState> {
                 this.materials[psoHash] = mat;
                 this.cbuffers[psoHash] = cbuffers;
                 this.uniformGroups[psoHash] = ugroups;
+                this.uniforms[psoHash] = uniforms;
+
+                console.log(`New PSO <${psoHash}> has been created.`);
+                
             }
 
-            if (psoHash !== psoHashPrev) 
+            if (psoHash !== psoHashPrev) {
                 console.log(`switch pso <${psoHashPrev}> => <${psoHash}>`);
+                this.gui.remove();
+                this.gui.create(controls);
+            }
 
 
             const groups = this.uniformGroups[psoHash];
             const cbuffers = this.cbuffers[psoHash];
+            const uniforms = this.uniforms[psoHash];
             if (groups) {
                 GroupedUniforms.update(camera, mount, controls, timeline, deps, groups, cbuffers);
+                SingleUniforms.update(controls, timeline, deps, uniforms);
             }
 
             // todo: do not change material every frame (!)
@@ -404,6 +415,11 @@ class Technique11Scene extends HDRScene<IProps, IState> {
                         mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
                         mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
                         mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
+
+                        mesh.geometry.attributes['a_position'] = mesh.geometry.attributes.position;
+                        mesh.geometry.attributes['a_normal'] = mesh.geometry.attributes.normal;
+                        mesh.geometry.attributes['a_texcoord'] = mesh.geometry.attributes.uv;
+
                         // husky
                         mesh.geometry.attributes['a_v_position'] = mesh.geometry.attributes.position;
                         mesh.geometry.attributes['a_v_normal'] = mesh.geometry.attributes.normal;

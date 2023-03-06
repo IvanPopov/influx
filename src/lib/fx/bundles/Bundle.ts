@@ -10,7 +10,7 @@ import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, getFBControlType, getFBPropertyType } from "./utils";
+import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, controlValueFromString, propertyValueFromString } from "./utils";
 
 import { CBBundleT } from "@lib/idl/bundles/auto/cbbundle";
 import { BufferBundleT } from "@lib/idl/bundles/auto/fx/buffer-bundle";
@@ -294,12 +294,12 @@ function createFxControls(controls: IUIControl[]): UIControlT[] {
     return controls.map(ctrl => {
         const props = ctrl.properties.map(prop => new ViewTypePropertyT(
             prop.name, 
-            getFBPropertyType(prop.type), 
+            propertyValueFromString(prop.type), 
             encodePropertyValue(prop.type, prop.value)
         ));
         return new UIControlT(
             ctrl.name, 
-            getFBControlType(ctrl.type), 
+            controlValueFromString(ctrl.type), 
             encodeControlValue(ctrl.type, ctrl.value), 
             props);
     });
@@ -313,7 +313,7 @@ function createFxPresets(presets: IPreset[]): PresetT[] {
             desc,
             data.map(({ name, type, value }) => new PresetEntryT(
                 name, 
-                getFBControlType(type), 
+                controlValueFromString(type), 
                 encodeControlValue(type, value)
             ))
         )

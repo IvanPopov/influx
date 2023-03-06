@@ -14,6 +14,8 @@ import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
 import { visitor } from '@lib/fx/Visitors';
+import { IMap } from "@lib/idl/IMap";
+import { EVariableUsageFlags } from "../analisys/instructions/VariableDeclInstruction";
 
 export interface IViewTypeProperty {
     name: string;
@@ -23,9 +25,9 @@ export interface IViewTypeProperty {
 
 export interface IUIControl {
     name: string;
-    type: string;
+    type: string;                       // like color
     value: ControlValueType;
-    properties: IViewTypeProperty[];
+    properties: IViewTypeProperty[];    // custom parameters, like min/max/step etc.
 }
 
 export interface IPresetEntry {
@@ -67,6 +69,7 @@ export interface ITechniqueReflection<PassT extends IPassReflection = IPassRefle
 
 export interface ITechnique11Reflection<PassT extends IPass11Reflection = IPass11Reflection> {
     name: string;
+    controls: IUIControl[];
 }
 
 
@@ -136,6 +139,10 @@ export interface IFxContextExOptions extends ICodeConvolutionContextOptions {
     globalUniformsGatherToDedicatedConstantBuffer?: boolean;
     globalUniformsConstantBufferRegister?: number;
     globalUniformsConstantBufferName?: string;
+
+    argUniformsToDedicatedConstantBuffer?: boolean;
+    argUniformsConstantBufferRegister?: number;
+    argUniformsConstantBufferName?: string;
 }
 
 
@@ -144,9 +151,9 @@ export interface ICSShaderReflectionEx extends ICSShaderReflection {
 }
 
 
-const isPartId = (p: IVariableDeclInstruction) => 
+const isPartId = (p: IVariableDeclInstruction) =>
     (p.semantic === 'PART_ID' || p.name == 'partId') && types.equals(/u?int/, p.type);
-const isSpawnId = (p: IVariableDeclInstruction) => 
+const isSpawnId = (p: IVariableDeclInstruction) =>
     (p.semantic === 'SPAWN_ID' || p.name == 'spawnId') && types.equals(/u?int/, p.type);
 
 interface IOptParam {
@@ -162,7 +169,7 @@ function resolveOptArguments(params: IOptParam[], def: IFunctionDefInstruction):
     const indices = resolveOptIndices(params, def);
     const n = indices.filter(i => i !== -1).length;
     const res = new Array(n);
-    for (let i = 0; i < indices.length; ++ i) {
+    for (let i = 0; i < indices.length; ++i) {
         const pos = indices[i];
         if (pos !== -1) {
             res[pos] = params[i].name;
@@ -170,6 +177,9 @@ function resolveOptArguments(params: IOptParam[], def: IFunctionDefInstruction):
     }
     return res;
 }
+
+export const AUTOGEN_GLOBALS = `AUTOGEN_GLOBALS`;
+export const AUTOGEN_CONTROLS = `AUTOGEN_CONTROLS`;
 
 export class FxTranslatorContext extends FxConvolutionContext {
     // (!) override
@@ -292,56 +302,83 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         https://help.autodesk.com/view/MAXDEV/2022/ENU/?guid=Max_Developer_Help_3ds_max_sdk_features_rendering_programming_hardware_shaders_shader_semantics_and_annotations_supported_hlsl_shader_annotation_html
     */
     protected addControl(ctx: ContextT, src: IVariableDeclInstruction): boolean {
-        if (!src.annotation) {
+        const { id, type, initExpr, annotation } = src;
+
+        if (!annotation) {
             return false; //TODO: controls without annotations
         }
 
         if (!src.isGlobal()) {
             return false;
         }
-        
-        let control: IUIControl = { name: src.id.name, type: src.type.name, value: null, properties: [] };
 
-        if (src.annotation) {
-            src.annotation.decls.forEach(decl => {
-                let propertyName = decl.name;
-                let propertyType = decl.type.name;
-                switch (propertyName) {
-                    case 'UIType': propertyName = '__type'; break;
-                    case 'UIName': propertyName = '__caption'; break;
-                    case 'UIMin': propertyName = '__min'; break;
-                    case 'UIMax': propertyName = '__max'; break;
-                    case 'UIStep': propertyName = '__step'; break;
-                }
+        let length = type.isNotBaseArray() ? type.length : -1;
+        for (let i = 0; i < Math.abs(length); ++i) {
+            const postfix = `${length > 0 ? `[${i}]` : ``}`;
+            const ctrl: IUIControl = {
+                name: id.name + postfix,
+                type: type.name,
+                value: null,
+                properties: []
+            };
 
-                let propertyValue = getPropertyValue(propertyType, decl.initExpr);
-                if (['__min', '__max', '__step'].indexOf(propertyName) !== -1) {
-                    if (propertyType === 'float' && control.type === 'float' ||
-                        propertyType === 'int' && control.type === 'int' ||
-                        propertyType === 'uint' && control.type === 'uint') {
-                        control.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
+
+            if (annotation) {
+                annotation.decls.forEach(decl => {
+                    let propertyName = decl.name;
+                    let propertyType = decl.type.name;
+                    switch (propertyName) {
+                        case 'UIType': propertyName = '__type'; break;
+                        case 'UIName': propertyName = '__caption'; break;
+                        case 'UIMin': propertyName = '__min'; break;
+                        case 'UIMax': propertyName = '__max'; break;
+                        case 'UIStep': propertyName = '__step'; break;
                     }
+
+                    let propertyValue = getPropertyValue(propertyType, decl.initExpr);
+                    if (['__min', '__max', '__step'].indexOf(propertyName) !== -1) {
+                        if (propertyType === 'float' && ctrl.type === 'float' ||
+                            propertyType === 'int' && ctrl.type === 'int' ||
+                            propertyType === 'uint' && ctrl.type === 'uint') {
+                            ctrl.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
+                        }
+                    }
+                    else {
+                        if (propertyName === '__type' && propertyType !== 'string') {
+                            return;
+                        }
+                        if (propertyName === '__type' && propertyValue === 'color') {
+                            ctrl.type = 'color';
+                            return;
+                        }
+                        ctrl.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
+                    }
+                });
+            }
+
+            const caption = ctrl.properties.find(prop => prop.name === "__caption");
+            if (caption) {
+                (caption.value as string) += postfix;
+            }
+
+            const encodeCtrlExpr = (type: string, initExpr: IExprInstruction) => {
+                if (initExpr.instructionType === EInstructionTypes.k_InitExpr) {
+                    return encodeInitExprToControlValue(type, (<IInitExprInstruction>initExpr)?.args);
+                } else {
+                    return encodeInitExprToControlValue(type, [ initExpr ]);
                 }
-                else {
-                    if (propertyName === '__type' && propertyType !== 'string') {
-                        return;
-                    }
-                    if (propertyName === '__type' && propertyValue === 'color') {
-                        control.type = 'color';
-                        return;
-                    }
-                    control.properties.push({ name: propertyName, type: propertyType, value: propertyValue });
-                }
-            });
+            }
+
+            if (length == -1) {
+                ctrl.value = encodeCtrlExpr(ctrl.type, src.initExpr);
+            } else {
+                let args = (<IInitExprInstruction>src.initExpr)?.args;
+                ctrl.value = encodeCtrlExpr(ctrl.type, args[i]);
+            }
+
+            ctx.addControl(ctrl);
         }
 
-        if (src.initExpr.instructionType === EInstructionTypes.k_InitExpr) {
-            control.value = getControlValue(control.type, (<IInitExprInstruction>src.initExpr)?.args);
-        } else {
-            control.value = getControlValue(control.type, [src.initExpr]);
-        }
-        
-        ctx.addControl(control);
         return true;
     }
 
@@ -376,14 +413,14 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         const facesName = `${baseName}Faces`;
         const indicesAdjName = `${baseName}GsAdjacency`;
         const faceAdjName = `${baseName}FaceAdjacency`;
-        
+
         const { typeName: elementTypeName } = this.resolveType(ctx, elementType);
 
         const vertices = this.emitBuffer(ctx, `StructuredBuffer<${elementTypeName}>`, verticesName, "vertices");
         const faces = this.emitBuffer(ctx, `Buffer<uint3>`, facesName, "faces");
         const indicesAdj = this.emitBuffer(ctx, `Buffer<uint>`, indicesAdjName, "gs like adjacency");
         const faceAdj = this.emitBuffer(ctx, `Buffer<uint>`, faceAdjName, "face adjacency");
-        
+
         if (!ctx.has(name)) {
             // uniform uint trimesh0_vert_count;
             // uniform uint trimesh0_face_count;
@@ -402,7 +439,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             } else {
                 this.emitGlobalRaw(ctx, faceCountUName, `uniform uint ${faceCountUName}`);
             }
-            
+
             this.begin();
             this.emitLine(`void ${baseName}_GetDimensions(out uint vertCount, out uint faceCount)`);
             this.emitChar('{');
@@ -562,17 +599,17 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         if (ctx.has(decl.name)) {
             return;
         }
-        
+
         if (this.addControl(ctx, decl)) {
             this.emitControlVariable(ctx, decl);
             ctx.add(decl.name);
             return;
         }
 
-        const isUniform = type.isUniform() || 
-            (!type.isStatic() && decl.isGlobal() && 
-                !SystemScope.isSamplerState(type) && 
-                !SystemScope.isBuffer(type) && 
+        const isUniform = type.isUniform() ||
+            (!type.isStatic() && decl.isGlobal() &&
+                !SystemScope.isSamplerState(type) &&
+                !SystemScope.isBuffer(type) &&
                 !SystemScope.isUAV(type) &&
                 !SystemScope.isTexture(type));
 
@@ -603,15 +640,28 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             'ELAPSED_TIME_LEVEL',
             'FRAME_NUMBER',
 
-            'PARENT_POSITION',
-            'CAMERA_POSITION'
+            'PARENT_POSITION',              // << remove
+            'MODEL_MATRIX',                 // << remove
+            'MODEL_VIEW_PROJECTION_MATRIX', // << remove
+            
+            'CAMERA_POSITION',
+            'VIEW_MATRIX',
+            'VIEW_PROJECTION_MATRIX',
+            'PROJECTION_MATRIX',
         ];
 
         const semantic = decl.semantic || camelToSnakeCase(decl.name).toUpperCase();
 
+        if (!!(decl.usageFlags & EVariableUsageFlags.k_Argument)) {
+            // todo: set TRUE by default (!)
+            if (ctx.opts.argUniformsToDedicatedConstantBuffer || true) {
+                
+            }
+        }
+
         if (!KNOWN_EXTERNAL_GLOBALS.includes(semantic)) {
             // super.emitVariable(ctx, decl);
-            console.warn(`Unsupported uniform has been used: ${decl.toCode()}.`);
+            console.warn(`Unsupported uniform has been used: ${decl.toCode()} (${decl.usageFlags}).`);
             // return;
         }
 
@@ -663,7 +713,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         // Init(out Part part, int partId: PART_ID, ...parameters)
         // Init(out Part part, ...parameters)
         let argsList = [[/u?int/, /u?int/], [/u?int/], []]
-            .map(v => [ fx.particle, ...v, ...stmt.args.map(a => a.type) ]);
+            .map(v => [fx.particle, ...v, ...stmt.args.map(a => a.type)]);
 
         let init = null;
         for (const args of argsList) {
@@ -1011,11 +1061,11 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
         // all uniform parameters will be printed as global variables through their id
         params
-            .filter(p => (!this.options.omitEmptyParams || p.type.size !== 0) && !p.type.isUniform())
+            // .filter(p => (!this.options.omitEmptyParams || p.type.size !== 0) && !p.type.isUniform())
             .forEach((param, i, list) => {
-            this.emitParam(ctx, param);
-            (i + 1 != list.length) && this.emitChar(',');
-        });
+                this.emitParam(ctx, param);
+                (i + 1 != list.length) && this.emitChar(',');
+            });
     }
 
 
@@ -1075,7 +1125,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 this.emitLine(`uint Type = ${request}.type;`);
                 this.emitLine(`uint SpawnId = ${request}.offset + ThreadId;`);
-  
+
                 const optParams = [
                     { name: `Particle`, checker: () => true }, // always presented
                     { name: `PartId`, checker: isPartId },
@@ -1084,7 +1134,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
                 if (initFn) {
                     const optArgs = resolveOptArguments(optParams, initFn.def);
-                
+
                     this.emitLine(`if (Type == 0u)`);
                     this.emitChar('{');
                     this.push();
@@ -1109,7 +1159,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     this.push();
                     {
                         const optArgs = resolveOptArguments(optParams, ctor.def);
-                        
+
                         // TODO: move param unpacking to separate function
                         // unpack arguments
                         let nfloat = 0;
@@ -1142,7 +1192,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                         this.emitKeyword(ctor.name);
                         this.emitChar('(');
                         this.emitNoSpace();
-                        
+
                         this.emitKeyword(optArgs.join(', '));
 
                         if (params.length > 0) {
@@ -1442,7 +1492,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 }
             }
 
-            const name = ctx.opts.globalUniformsConstantBufferName || 'GLOBAL_UNIFORMS';
+            const name = ctx.opts.globalUniformsConstantBufferName || AUTOGEN_GLOBALS;
             this.begin();
             {
                 this.emitKeyword('cbuffer');
@@ -1497,7 +1547,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 }
             }
 
-            const name = ctx.opts.uiControlsConstantBufferName || 'AUTOGEN_CONTROLS';
+            const name = ctx.opts.uiControlsConstantBufferName || AUTOGEN_CONTROLS;
             this.begin();
             {
                 this.emitKeyword('cbuffer');
@@ -1517,8 +1567,19 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                 this.emitChar('{');
                 this.push();
                 {
+                    // collect all array elements (color[2]) into array "color"
+                    const nameRexp = /([\w_][\w\d]+)(\[([\d]+)\])?/;
+                    const fields: IMap<{ name: string; type: string }> = {};
                     uiControls.forEach(ctrl => {
-                        this.emitKeyword(typeNameOfUIControl(ctrl));
+                        const name = ctrl.name;
+                        const match = name.match(nameRexp);
+                        const type = typeNameOfUIControl(ctrl);
+                        fields[match[1]] ||= { name, type };
+                        fields[match[1]].name = match[3] ? `${match[1]}[${Number(match[3]) + 1}]` : match[1];
+                    });
+
+                    Object.values(fields).forEach(ctrl => {
+                        this.emitKeyword(ctrl.type);
                         this.emitKeyword(ctrl.name);
                         this.emitChar(';');
                         this.emitNewline();
@@ -1707,8 +1768,11 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         // emit global uniforms and so on.
         this.finalizeTechnique(ctx);
 
+        const controls = [...ctx.controls];
+
         const refl = {
-            name
+            name,
+            controls
         };
 
         ctx.addTechnique11(refl);
@@ -1742,7 +1806,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
                     });
                 }
 
-                const value = getControlValue(controlType, control.args);
+                const value = encodeInitExprToControlValue(controlType, control.args);
                 data.push({ name: src.name, type: controlType, value });
             });
             return { name, desc, data };
@@ -1750,7 +1814,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
     }
 
 
-    private static fxtTranslator = new FxTranslator({ omitEmptyParams: true }); 
+    private static fxtTranslator = new FxTranslator({ omitEmptyParams: true });
 
     static translate(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
         FxTranslator.fxtTranslator.emit(ctx, instr);
@@ -1775,7 +1839,7 @@ function getPropertyValue(type: string, instr: IExprInstruction): PropertyValueT
     return null;
 }
 
-function getControlValue(type: string, args: IExprInstruction[]): ControlValueType {
+function encodeInitExprToControlValue(type: string, args: IExprInstruction[]): ControlValueType {
     switch (type) {
         case 'int': return (getExpr(args[0]) as IntInstruction).value;
         case 'uint': return (getExpr(args[0]) as IntInstruction).value;
@@ -1812,6 +1876,7 @@ function getControlValue(type: string, args: IExprInstruction[]): ControlValueTy
     }
     return null;
 }
+
 
 function getExpr(expr: IExprInstruction): IExprInstruction {
     return expr.instructionType === EInstructionTypes.k_InitExpr

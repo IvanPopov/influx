@@ -267,7 +267,7 @@ const compileLogic = createLogic<IStoreState, IGraphCompile['payload']>({
         let constDoc = null;
         if (constants.length) {
             constDoc = await createTextDocument('://user-constants', 
-            constants.map(({ name, type, value }) => `const ${type} ${name} = ${value};`).join('\n') + '\n\n');
+            constants.map(({ name, type, value }) => `static const ${type} ${name} = ${value};`).join('\n') + '\n\n');
         }
 
         let doc = await extendFXSLDocument(constDoc, env);

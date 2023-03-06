@@ -1,5 +1,5 @@
 import { isString } from "@lib/common";
-import { cloneValue, colorToUint, encodeControlsToString, uintToColor } from "@lib/fx/bundles/utils";
+import { cloneValue, colorToUint, encodePlaygroundControlsToString, uintToColor } from "@lib/fx/bundles/utils";
 import { IMap } from "@lib/idl/IMap";
 import { Color, IPlaygroundControlsState } from "@sandbox/store/IStoreState";
 import { GUI } from "dat.gui";
@@ -16,6 +16,14 @@ export class GuiView {
 
     mount(el: HTMLDivElement) {
         this.mountEl = el;
+    }
+
+    detach() {
+        this.mountEl.removeChild(this.gui.domElement);
+    }
+
+    attach() {
+        this.mountEl.appendChild(this.gui.domElement);
     }
 
     debugDraw() {
@@ -36,9 +44,10 @@ export class GuiView {
 
     remove() {
         if (this.gui) {
-            this.mountEl.removeChild(this.gui.domElement);
+            this.detach();
             this.gui.destroy();
             this.gui = null;
+            this.hash = null;
         }
     }
 
@@ -71,21 +80,21 @@ export class GuiView {
         const gui = new GUI({ autoPlace: false });
 
         for (let name in controls.values) {
-            let control = controls.controls[name];
-            let viewType = control.properties["__type"] as string || control.type;
-            let caption = control.properties["__caption"] as string || control.name;
-            let ctrl = null;
+            let ctrl = controls.controls[name];
+            let viewType = ctrl.properties["__type"] as string || ctrl.type;
+            let caption = ctrl.properties["__caption"] as string || ctrl.name;
+            let guiCtrl = null;
             switch (viewType) {
                 case 'int':
                 case 'uint':
                 case 'float':
-                    ctrl = gui.add(controls.values, name);
+                    guiCtrl = gui.add(controls.values, name);
                     break;
                 case 'slider':
-                    let min = control.properties["__min"] as number;
-                    let max = control.properties["__max"] as number;
-                    let step = control.properties["__step"] as number;
-                    ctrl = gui.add(controls.values, name, min, max, step);
+                    let min = ctrl.properties["__min"] as number;
+                    let max = ctrl.properties["__max"] as number;
+                    let step = ctrl.properties["__step"] as number;
+                    guiCtrl = gui.add(controls.values, name, min, max, step);
                     break;
                 case 'color':
                     let colorFolder = gui.addFolder(caption);
@@ -146,8 +155,8 @@ export class GuiView {
                     break;
             }
 
-            if (ctrl) {
-                ctrl.name(caption);
+            if (guiCtrl) {
+                guiCtrl.name(caption);
             }
         }
 
@@ -174,7 +183,7 @@ export class GuiView {
         // todo: show notification
         gui.add({
             [copyToClipboard]: () => {
-                copy(encodeControlsToString(controls), { debug: true });
+                copy(encodePlaygroundControlsToString(controls), { debug: true });
                 toast({
                     size: 'tiny',
                     type: 'info',
@@ -188,12 +197,12 @@ export class GuiView {
         // gui.close();
         gui.open();
 
-        this.mountEl.appendChild(gui.domElement);
-
         gui.domElement.style.position = 'absolute';
         gui.domElement.style.top = '2px';
-
+        
         this.gui = gui;
         this.hash = hash;
+
+        this.attach();
     }
 }

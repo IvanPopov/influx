@@ -330,12 +330,12 @@ class Playground extends React.Component<IPlaygroundProps> {
                             ))}
                             {list11.map(fx => (
                                 <Popup inverted
+                                    key={`li-${fx.name}`}
                                     content={
                                         <span>{fx.name}</span>
                                     }
                                     trigger={
                                         <List.Item
-                                            key={`li-${fx.name}`}
                                             disabled={!fx.isValid()}
                                             as={(fx.name === active ? 'b' : 'a')}
                                             onClick={() => this.pickEffect(fx.name)}

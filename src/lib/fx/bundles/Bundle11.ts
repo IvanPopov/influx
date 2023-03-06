@@ -2,32 +2,50 @@ import { assert } from "@lib/common";
 import * as Bytecode from "@lib/fx/bytecode/Bytecode";
 import { typeAstToTypeLayout } from "@lib/fx/bytecode/VM/native";
 import * as TSVM from "@lib/fx/bytecode/VM/ts/bundle";
+import { createSLASTDocument } from "@lib/fx/SLASTDocument";
+import { createSLDocument } from "@lib/fx/SLDocument";
+import { createTextDocument } from "@lib/fx/TextDocument";
+import { CodeConvolutionContext, CodeConvolutionEmitter } from "@lib/fx/translators/CodeConvolutionEmitter";
 import { CodeContextMode } from "@lib/fx/translators/CodeEmitter";
-import { FxTranslator, FxTranslatorContext, IFxContextExOptions } from "@lib/fx/translators/FxTranslator";
+import { FxTranslator, FxTranslatorContext, IFxContextExOptions, IUIControl } from "@lib/fx/translators/FxTranslator";
+import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
 import { EChunkType } from "@lib/idl/bytecode";
 import { ITechnique11Instruction } from "@lib/idl/IInstruction";
+import { Diagnostics } from "@lib/util/Diagnostics";
 import { isDef } from "@lib/util/s3d/type";
-import { ConvolutionPackEx } from "./utils";
+import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, controlValueFromString, propertyValueFromString } from "./utils";
 
 import * as flatbuffers from "flatbuffers";
 
+import { CBBundleT } from "@lib/idl/bundles/auto/cbbundle";
 import { BundleT } from "@lib/idl/bundles/auto/fx/bundle";
 import { BundleContent } from "@lib/idl/bundles/auto/fx/bundle-content";
 import { BundleMetaT } from "@lib/idl/bundles/auto/fx/bundle-meta";
 import { BundleSignatureT } from "@lib/idl/bundles/auto/fx/bundle-signature";
+import { PixelShaderT } from "@lib/idl/bundles/auto/fx/pixel-shader";
 import { PresetT } from "@lib/idl/bundles/auto/fx/preset";
 import { Shader } from "@lib/idl/bundles/auto/fx/shader";
 import { Technique11BundleT } from "@lib/idl/bundles/auto/fx/technique11bundle";
 import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11render-pass";
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
-import { CBBundleT, PixelShaderT, VertexShaderT } from "@lib/idl/bundles/auto/technique11_generated";
-import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
-import { createTextDocument } from "../TextDocument";
-import { createSLASTDocument } from "../SLASTDocument";
-import { createSLDocument } from "../SLDocument";
-import { Diagnostics } from "@lib/util/Diagnostics";
-import { CodeConvolutionContext, CodeConvolutionEmitter } from "../translators/CodeConvolutionEmitter";
-import { ISLDocument } from "@lib/idl/ISLDocument";
+import { VertexShaderT } from "@lib/idl/bundles/auto/fx/vertex-shader";
+import { ViewTypePropertyT } from "@lib/idl/bundles/auto/fx/view-type-property";
+
+/** Create flatbuffers controls from native translator description. */
+function createFxControls(controls: IUIControl[]): UIControlT[] {
+    return controls.map(ctrl => {
+        const props = ctrl.properties.map(prop => new ViewTypePropertyT(
+            prop.name, 
+            propertyValueFromString(prop.type), 
+            encodePropertyValue(prop.type, prop.value)
+        ));
+        return new UIControlT(
+            ctrl.name, 
+            controlValueFromString(ctrl.type), 
+            encodeControlValue(ctrl.type, ctrl.value), 
+            props);
+    });
+}
 
 
 export interface Bundle11Options {
@@ -69,19 +87,19 @@ function finalizeBundle(bundle: BundleT, opts: Bundle11Options = {}): Uint8Array
 }
 
 
-function translateTechnique(tech: ITechnique11Instruction, translator: IFxContextExOptions, 
-    convPack: ConvolutionPackEx) {
-    console.info(`compile technique <${tech.name}>`);
-    // translate technique to raw HLSL code in order to get merged global & local
-    // constant buffers and broken down fx types
-    const ctx = new FxTranslatorContext({ ...translator, ...convPack });
-    return FxTranslator.translate(tech, ctx);
-}
-
-
+/**
+ * Pipeline:
+ *  1. Translate the whole technique to raw hlsl
+ *     in order to unwrap fx types (like trimeshes)
+ *     and collect autogen buffers (like controls, global & local uniforms).
+ *  2. Iterate over pass code to find all used shaders to print raw per 
+ *     shader hlsl code with precise reflections (used cbuffers).
+ *  3. Wrap with flatbuffers.
+ */
 async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bundle11Options = {}, 
     convPack: ConvolutionPackEx = {}): Promise<Uint8Array | BundleT> {
-    const codeRaw = translateTechnique(tech, opts.translator, convPack);
+    const ctx = new FxTranslatorContext({ ...opts.translator, ...convPack });
+    const codeRaw =  FxTranslator.translate(tech, ctx);
     const passes: Technique11RenderPassT[] = [];
     for (const pass11 of tech.passes) {
         const { program } = Bytecode.translate(pass11);
@@ -129,7 +147,7 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
 
                 const scope = slDocument.root.scope;
                 const entryFn = scope.findFunction(name, null);
-                const ctx = new CodeConvolutionContext({ ...convPackSh, mode });
+                const ctx = new CodeConvolutionContext({ ...convPackSh, mode, constants: args });
                 const sourceCode = CodeConvolutionEmitter.translate(entryFn, ctx);
 
                 const cbuffers = ctx.cbuffers.map(({ name, register, size }) => {
@@ -175,10 +193,16 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
     const { name } = tech;
     opts.name ||= name;
 
+    const reflection = ctx.techniques11[0];
+    const controls = createFxControls(reflection.controls);
+
+    // todo: add presets support.
+    // const presets = ...
+
     const tech11 = new Technique11BundleT(passes);
 
     const { meta } = opts;
-    const bundle = createFxBundle(opts.name, BundleContent.Technique11Bundle, tech11, new BundleMetaT(meta?.author, meta?.source));
+    const bundle = createFxBundle(opts.name, BundleContent.Technique11Bundle, tech11, new BundleMetaT(meta?.author, meta?.source), controls);
 
     return finalizeBundle(bundle, opts);
 }

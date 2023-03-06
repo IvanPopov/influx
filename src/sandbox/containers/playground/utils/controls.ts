@@ -29,7 +29,7 @@ function createPlaceholderTexture(width = 512, height = 512) {
 
 export const TEXTURE_PLACEHOLDER_WHITE_1X1 = createPlaceholderTexture(1, 1);
 
-export function controlToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
+export function controlValueToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
     let ab = new ArrayBuffer(4);
     let dv = new DataView(ab);
     switch (type) {
@@ -66,7 +66,7 @@ export function controlToThreeValue(ctrl: ControlValueType, type: string, deps: 
 
 
 
-export function storeThreeValue(num: number, type: string): number {
+export function typedNumberToF32Num(num: number, type: string): number {
     let ab = new ArrayBuffer(4);
     let dv = new DataView(ab);
     switch (type) {

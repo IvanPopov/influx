@@ -77,9 +77,6 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
             this.createGridHelper();
         }
 
-        // run rendering loop
-        this.start();
-
         window.addEventListener('resize', this.onWindowResize, false);
 
         // small hack for disabling arrow keys actings during the typing
@@ -245,7 +242,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         const timeline = this.props.timeline;
         timeline.tick();
     }
-    
+
     protected renderFrame() { this.renderer.render(this.scene, this.camera); }
     protected endFrame() { }
 

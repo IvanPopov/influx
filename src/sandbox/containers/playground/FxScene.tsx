@@ -200,7 +200,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
 
     protected gui = new GuiView;
     protected uniformGroups: GroupedUniforms = new GroupedUniforms;
-    protected uniforms: SingleUniforms = new SingleUniforms;
+    protected uniforms: IMap<THREE.IUniform>;
     protected deps = new Deps;
 
     constructor(props) {
@@ -223,9 +223,10 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
         this.gui.create(this.props.controls);
 
         this.uniformGroups.create9(this.props.emitter);
-        this.uniforms.create(this.props.controls, this.deps);
+        this.uniforms = SingleUniforms.create(this.props.controls, this.deps);
 
         this.createEmitter(this.props.emitter);
+        this.start();
     }
 
 
@@ -312,7 +313,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
             geometry.setAttribute(attr.name, interleavedAttr);
         });
 
-        const uniforms = this.uniforms.data();
+        const uniforms = this.uniforms;
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: desc.vertexShader,
@@ -357,7 +358,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
             };
         });
 
-        const uniforms = this.uniforms.data();
+        const uniforms = this.uniforms;
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: vertexShader,
@@ -577,7 +578,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
         const color = new THREE.InterleavedBufferAttribute(instancedBuffer, 4, 3);
         const size = new THREE.InterleavedBufferAttribute(instancedBuffer, 1, 7);
 
-        const uniforms = this.uniforms.data();
+        const uniforms = this.uniforms;
         const material = new THREE.RawShaderMaterial({
             uniforms,
             vertexShader: Shaders('defMatVS'),
@@ -892,7 +893,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
 
         // IP: including textures
         this.uniformGroups.update9(camera, viewport, controls, timeline, deps, tech9);
-        this.uniforms.update(controls, timeline, deps);
+        SingleUniforms.update(controls, timeline, deps, this.uniforms);
 
         // dedicated way to setup bytecode bundle resource
         // todo: generalize with uniforms?

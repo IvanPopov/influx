@@ -1,4 +1,4 @@
-import { assert, isDef, isNull } from "@lib/common";
+import { assert, isBoolean, isDef, isNull } from "@lib/common";
 import { instruction, variable, types } from "@lib/fx/analisys/helpers";
 import { EInstructionTypes, IAnnotationInstruction, IArithmeticExprInstruction, IAssignmentExprInstruction, IAttributeInstruction, IBitwiseExprInstruction, ICastExprInstruction, ICbufferInstruction, ICompileExprInstruction, IComplexExprInstruction, IConditionalExprInstruction, IConstructorCallInstruction, IDeclStmtInstruction, IExprInstruction, IExprStmtInstruction, IForStmtInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IIdExprInstruction, IIfStmtInstruction, IInitExprInstruction, IInstruction, IInstructionCollector, ILiteralInstruction, ILogicalExprInstruction, IPassInstruction, IPostfixArithmeticInstruction, IPostfixIndexInstruction, IPostfixPointInstruction, IRelationalExprInstruction, IReturnStmtInstruction, IStateBlockInstruction, IStmtBlockInstruction, ITypeDeclInstruction, ITypedefInstruction, ITypedInstruction, ITypeInstruction, IUnaryExprInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
 
@@ -98,6 +98,12 @@ export interface ICodeContextOptions {
     mode?: CodeContextMode;
     // rename entry point
     entryName?: string;
+
+    // temp solution
+    constants?: {
+        type: string;
+        value: number | boolean;
+    }[];
 }
 
 
@@ -520,8 +526,37 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
 
     protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
-        this.emitParams(ctx, params);
+        // emit constants instead of uniforms arguments
+        const constants = ctx.opts.constants;
+        if (constants) {
+            params.filter(p => p.type.isUniform()).forEach((param, i) => {
+                const c = constants[i];
+                const name = param.name;
+
+                if (ctx.has(name)) {
+                    // global variable with the same name as argument already exists
+                    console.assert(false, '?!');
+                    return;
+                }
+
+                ctx.add(name);
+                this.begin();
+                this.emitLine(`static const ${c.type} ${name} = ${String(c.value)};`);
+                this.end();
+            })
+        }
+        // skip uniform arguments if constant substitution were passed
+        params
+            .filter(p => (!this.options.omitEmptyParams || p.type.size !== 0) && (!p.type.isUniform() || !constants))
+            .forEach((param, i, list) => {
+                this.emitParam(ctx, param);
+                (i + 1 != list.length) && this.emitChar(',');
+            });
     }
+
+    // protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
+    //     this.emitParams(ctx, params);
+    // }
 
 
     // todo: add compute entry support
@@ -984,8 +1019,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
         const { name, type } = decl;
         const isUniformArg = this.isMain() && decl.isParameter() && type.isUniform();
 
-
-        if (decl.isGlobal() || isUniformArg) {
+        if (decl.isGlobal()/* || isUniformArg*/) {
             if (decl.usageFlags & EVariableUsageFlags.k_Cbuffer) {
                 const cbufType = decl.parent;
                 const cbuf = <ICbufferInstruction>cbufType.parent;

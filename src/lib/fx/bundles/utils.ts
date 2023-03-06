@@ -31,7 +31,8 @@ export type ControlValueT = UintValueT | IntValueT | FloatValueT | Float2ValueT 
 
 // -----------------------------------------------------------------------------------------
 
-export function getFBControlType(type: string) : ControlValue {
+/** Get flatbuffers control value type from string constant. */
+export function controlValueFromString(type: string) : ControlValue {
     switch(type) {
         case 'int': return ControlValue.IntValue;
         case 'uint': return ControlValue.UintValue;
@@ -47,7 +48,9 @@ export function getFBControlType(type: string) : ControlValue {
     return null;
 }
 
-export function getFBPropertyType(type: string) : PropertyValue {
+
+/** Get flatbuffers property value type from string constant. */
+export function propertyValueFromString(type: string) : PropertyValue {
     switch(type) {
         case 'int': return PropertyValue.IntValue;
         case 'uint': return PropertyValue.UintValue;
@@ -58,6 +61,7 @@ export function getFBPropertyType(type: string) : PropertyValue {
     return null;
 }
 
+/** Encode native JS data to flatbuffers value. */
 export function encodeControlValue(type: string, data: ControlValueType) : ControlValueT {
     switch(type) {
         case 'int': return new IntValueT(data as number);
@@ -88,6 +92,8 @@ export function encodeControlValue(type: string, data: ControlValueType) : Contr
     return null;
 }
 
+
+/** Encode native JS data to flatbuffers value. */
 export function encodePropertyValue(type: string, data: PropertyValueType) : PropertyValueT {
     switch(type) {
         case 'int': return new IntValueT(data as number);
@@ -99,9 +105,8 @@ export function encodePropertyValue(type: string, data: PropertyValueType) : Pro
     return null;
 }
 
-// -----------------------------------------------------------------------------------------
 
-export function getControlType(type: ControlValue) : string {
+export function controlValueToString(type: ControlValue) : string {
     switch(type) {
         case ControlValue.IntValue: return 'int';
         case ControlValue.UintValue: return 'uint';
@@ -117,7 +122,8 @@ export function getControlType(type: ControlValue) : string {
     return null;
 }
 
-export function getPropertyType(type: PropertyValue) : string {
+
+export function propertyValueToString(type: PropertyValue) : string {
     switch(type) {
         case PropertyValue.IntValue: return 'int';
         case PropertyValue.UintValue: return 'uint';
@@ -127,6 +133,7 @@ export function getPropertyType(type: PropertyValue) : string {
     assert(false, 'Unsupported property value type');
     return null;
 }
+
 
 export function decodeControlValue(type: ControlValue, data: ControlValueT) : ControlValueType {
     switch(type) {
@@ -154,6 +161,7 @@ export function decodeControlValue(type: ControlValue, data: ControlValueT) : Co
     return null;
 }
 
+
 export function decodePropertyValue(type: PropertyValue, data: PropertyValueT) : PropertyValueType {
     switch(type) {
         case PropertyValue.IntValue: return (data as UintValueT).value;
@@ -167,12 +175,15 @@ export function decodePropertyValue(type: PropertyValue, data: PropertyValueT) :
 
 // -----------------------------------------------------------------------------------------
 
+/** Decode flatbufers control descriptions to native, playground ready, description. */
 export function decodeControls(controlsFx: UIControlT[]): IMap<IPlaygroundControl> {
     let controls : IMap<IPlaygroundControl> = {};
     controlsFx.forEach(controlFx => {
         let properties : IMap<PropertyValueType> = {};
         let controlName = controlFx.name as string;
-        let controlType = getControlType(controlFx.valueType);
+        // controlFx.values an array of the same types
+        // so valuesType contains the same values
+        let controlType = controlValueToString(controlFx.valueType);
 
         controlFx.properties.forEach(propFx => {
             const name = propFx.name as string;
@@ -189,12 +200,17 @@ export function decodeControls(controlsFx: UIControlT[]): IMap<IPlaygroundContro
     return controls;
 }
 
+
+/** Decode flatbufers control values to native values. */
 export function decodeValues(controls: UIControlT[]): ControlValues {
     let values: ControlValues = {};
-    controls.forEach(ctrl => values[ctrl.name as string] = decodeControlValue(ctrl.valueType, ctrl.value));
+    controls.forEach(ctrl => 
+        values[ctrl.name as string] = decodeControlValue(ctrl.valueType, ctrl.value));
     return values;
 }
 
+
+/** Decode flatbufers presets to native, playground ready, presets. */
 export function decodePresets(presets: PresetT[]): IPlaygroundPreset[] {
     // some kind of muddy and clumsy convert from flatbuffers to native TS :/
     return presets.map(({ name, desc, data }): IPlaygroundPreset => 
@@ -203,11 +219,13 @@ export function decodePresets(presets: PresetT[]): IPlaygroundPreset[] {
             desc: <string>desc,
             data: data.map(({ name, valueType, value }) => ({ 
                 name: <string>name,
-                type: getControlType(valueType),
+                type: controlValueToString(valueType),
                 value: decodeControlValue(valueType, value)
             } as IPlaygroundPresetEntry))
         }));
 }
+
+
 
 function decodeBundle(data: Uint8Array | BundleT): BundleT {
     let fx: BundleT = null;
@@ -223,6 +241,7 @@ function decodeBundle(data: Uint8Array | BundleT): BundleT {
     return fx;
 }
 
+
 export function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundControlsState {
     const fx = decodeBundle(data);
     const controls = decodeControls(fx.controls);
@@ -232,11 +251,14 @@ export function decodeBundleControls(data: Uint8Array | BundleT): IPlaygroundCon
     return { controls, values, presets };
 }
 
-export function encodeControlsToString(controls: IPlaygroundControlsState): string {
+
+export function encodePlaygroundControlsToString(controls: IPlaygroundControlsState): string {
     let data = [];
     for (let name in controls.values) {
         const value = controls.values[name];
+        const elements = [];
         const args = [];
+
         switch (controls.controls[name].type) {
             case 'int':
             case 'uint':
@@ -266,7 +288,9 @@ export function encodeControlsToString(controls: IPlaygroundControlsState): stri
         data.push(`${name} = { ${args.join(', ')} }`);
     }
     return [...data, null].join(';\n');
+    return "";
 }
+
 
 export function cloneValue(type : string, value : ControlValueType) : ControlValueType {
     switch(type) {
@@ -284,10 +308,12 @@ export function cloneValue(type : string, value : ControlValueType) : ControlVal
     return null;
 }
 
+
 export function colorToUint({ r, g, b, a }: Color) {
     [r ,g, b, a] = [r, g, b, a].map(x => Math.max(0, Math.min(255, x * 255)));
     return /*a << 24 | */b << 0 | g << 8 | r << 16;
 }
+
 
 export function uintToColor(src: number, dst: Color) {
     dst.r = ((src >> 16) & 0xff) / 255.0;
@@ -296,6 +322,7 @@ export function uintToColor(src: number, dst: Color) {
 }
 
 // -----------------------------------------------------------------------------------------
+
 
 export class ConvolutionPackEx implements ICodeConvolutionContextOptions {
     defines?: IKnownDefine[];
