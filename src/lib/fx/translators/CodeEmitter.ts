@@ -100,6 +100,7 @@ export interface ICodeContextOptions {
     entryName?: string;
 
     // temp solution
+    /** @deprecated Expected to use dynamic constants in the future. */
     constants?: {
         type: string;
         value: number | boolean;
@@ -526,7 +527,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
 
     protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
-        // emit constants instead of uniforms arguments
+        // emit constants instead of uniforms arguments if provided
         const constants = ctx.opts.constants;
         if (constants) {
             params.filter(p => p.type.isUniform()).forEach((param, i) => {
@@ -545,6 +546,7 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 this.end();
             })
         }
+
         // skip uniform arguments if constant substitution were passed
         params
             .filter(p => (!this.options.omitEmptyParams || p.type.size !== 0) && (!p.type.isUniform() || !constants))
@@ -553,10 +555,6 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
                 (i + 1 != list.length) && this.emitChar(',');
             });
     }
-
-    // protected emitEntryParams(ctx: ContextT, params: IVariableDeclInstruction[]) {
-    //     this.emitParams(ctx, params);
-    // }
 
 
     // todo: add compute entry support

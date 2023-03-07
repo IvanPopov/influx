@@ -107,14 +107,14 @@ export class GuiView {
                     let vec2Folder = gui.addFolder(caption);
                     vec2Folder.add(controls.values[name], 'x');
                     vec2Folder.add(controls.values[name], 'y');
-                    vec2Folder.open();
+                    vec2Folder.close();
                     break;
                 case 'float3':
                     let vec3Folder = gui.addFolder(caption);
                     vec3Folder.add(controls.values[name], 'x');
                     vec3Folder.add(controls.values[name], 'y');
                     vec3Folder.add(controls.values[name], 'z');
-                    vec3Folder.open();
+                    vec3Folder.close();
                     break;
                 case 'float4':
                     let vec4Folder = gui.addFolder(caption);
@@ -122,7 +122,8 @@ export class GuiView {
                     vec4Folder.add(controls.values[name], 'y');
                     vec4Folder.add(controls.values[name], 'z');
                     vec4Folder.add(controls.values[name], 'w');
-                    vec4Folder.open();
+                    vec4Folder.close();
+                    break;
                 case 'texture2d':
                     {
                         const list = GetAssetsTextures();

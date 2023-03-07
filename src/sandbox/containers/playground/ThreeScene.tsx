@@ -58,7 +58,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         this.scene.fog = this.fog;
 
         this.renderer = this.createRenderer(width, height);
-        this.renderer.setSize(width, height - 3);
+        this.renderer.setSize(width, height);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.domElement.id = "playground-main-canvas";
         // FIXME: remove this ui hack

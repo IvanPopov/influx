@@ -2,15 +2,23 @@ import { GUI } from 'dat.gui';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass';
+import { TAARenderPass } from 'three/examples/jsm/postprocessing/TAARenderPass';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass';
+import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader';
 
 import { isString } from '@lib/common';
 import autobind from 'autobind-decorator';
 import * as THREE from 'three';
 import ThreeScene, { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 
+type Tonemap = "No"| "Linear"| "Reinhard"| "Cineon"| "ACESFilmic"| "Custom";
+
 interface HdrParams {
     bloom: boolean;
     toneMappingExposure: number;
+    toneMappingType: Tonemap;
     bloomStrength: number;
     bloomThreshold: number;
     bloomRadius: number;
@@ -20,17 +28,26 @@ function dumpHdrParams(params: HdrParams) {
     Object.keys(params).forEach(prop => localStorage[prop] = params[prop]);
 }
 
+function size(div: HTMLDivElement, pixelRatio: number) {
+    return {
+        width: (div.clientWidth * pixelRatio),// + 0.5) >>> 0,
+        height: (div.clientHeight * pixelRatio),// + 0.5) >>> 0,
+    }
+}
+
 
 function restoreHdrParams(): HdrParams {
-    const params = {        
-        bloom: false,
+    const params: HdrParams = {        
+        bloom: true,
+        toneMappingType: 'Linear',
         toneMappingExposure: 1.0,
-        bloomStrength: 0.3,
-        bloomThreshold: 0.0,
+        bloomStrength: 2.0,
+        bloomThreshold: 1.0,
         bloomRadius: 1.0
     };
 
     params.bloom = isString(localStorage.bloom) ? localStorage.bloom === 'true' : params.bloom;
+    params.toneMappingType = localStorage.toneMappingType || 'ACESFilmic';
     params.toneMappingExposure = Number(localStorage.toneMappingExposure || params.toneMappingExposure);
     params.bloomThreshold = Number(localStorage.bloomThreshold || params.bloomThreshold);
     params.bloomStrength = Number(localStorage.bloomStrength || params.bloomStrength);
@@ -49,7 +66,11 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
             antialias: true,
             preserveDrawingBuffer: true // screenshots
         });
-        renderer.toneMapping = THREE.ReinhardToneMapping;
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize( width, height );
+        // renderer.outputEncoding = THREE.sRGBEncoding;
+        // renderer.toneMapping = ReinhardToneMapping;
+        // renderer.toneMapping = THREE.ACESFilmicToneMapping;
         return renderer;
     }
 
@@ -63,7 +84,7 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
 
         this.mount.appendChild(gui.domElement);
         gui.domElement.style.position = 'absolute';
-        gui.domElement.style.bottom = '23px';
+        gui.domElement.style.bottom = '20px';
 
         let tonemap = gui.addFolder('tonemapping');
 
@@ -91,6 +112,12 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
             dumpHdrParams(this.hdrParams);
         });
 
+        // tonemap.add(params, 'toneMappingType', [ "No", "Linear", "Reinhard", "Cineon", "ACESFilmic", "Custom" ])
+        // .name('type').onChange((value) => {
+        //     this.renderer.toneMapping = THREE[`${value}ToneMapping`];
+        //     dumpHdrParams(this.hdrParams);
+        // });
+
         tonemap.open();
         gui.close();
 
@@ -107,21 +134,43 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
         const scene = this.scene;
         const camera = this.camera;
         const renderer = this.renderer;
+        const mount = this.mount;
 
+        const pixelRatio = this.renderer.getPixelRatio();
+        const { width, height } = size(mount, pixelRatio);
         const renderScene = new RenderPass(scene, camera);
-        const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 1.5, 0.4, 0.85);
+        const smaaPass = new SMAAPass(width, height);
 
+        // const fxaaPass = new ShaderPass(FXAAShader);
+        // fxaaPass.material.uniforms[ 'resolution' ].value.x = 1 / width;
+        // fxaaPass.material.uniforms[ 'resolution' ].value.y = 1 / height;
+       
         this.hdrParams = restoreHdrParams();
+        this.renderer.toneMapping = THREE[`${this.hdrParams.toneMappingType}ToneMapping`];
 
         renderer.toneMappingExposure = this.hdrParams.toneMappingExposure;
         bloomPass.threshold = this.hdrParams.bloomThreshold;
         bloomPass.strength = this.hdrParams.bloomStrength;
         bloomPass.radius = this.hdrParams.bloomRadius;
 
-        this.composer = new EffectComposer(renderer);
+        const parameters = {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            format: THREE.RGBAFormat,
+            type: THREE.FloatType
+        };
+        
+        const renderTarget = new THREE.WebGLRenderTarget(width, height, parameters);
+        this.composer = new EffectComposer(renderer, renderTarget);
+        
         const composer = this.composer;
+        composer.setPixelRatio(pixelRatio);
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
+        // composer.addPass(new ShaderPass(GammaCorrectionShader));
+        composer.addPass(smaaPass);
+        // composer.addPass(fxaaPass);
 
         this.hdrControls = this.createSceneControls(bloomPass, renderer);
     }
@@ -139,9 +188,11 @@ class HDRScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends Th
 
     @autobind
     onWindowResize() {
-        super.onWindowResize();
-        const { clientWidth, clientHeight } = this.mount;
-        this.composer.setSize(clientWidth, clientHeight);
+        super.onWindowResize(); // << update renderer size and camera aspect
+        const { mount, renderer } = this;
+        const { width, height } = size(mount, renderer.getPixelRatio());
+        this.composer.setSize(width, height);
+        // todo: change resolution of bloom pass here?
     }
 }
 

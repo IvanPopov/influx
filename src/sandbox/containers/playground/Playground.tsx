@@ -440,7 +440,7 @@ class Playground extends React.Component<IPlaygroundProps> {
                             }
 
                             {/* todo: move snapshot preview to threescene class */}
-                            {!this.ranAsEmitter() && !this.ranAsMaterial() && snapshot &&
+                            {!this.ranAsEmitter() && !this.ranAsTechnique11() && !this.ranAsMaterial() && snapshot &&
                                 <div style={{
                                     backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.63), rgba(0, 0, 0, 0.623)), url(${snapshot.content})`,
                                     backgroundAttachment: 'fixed',

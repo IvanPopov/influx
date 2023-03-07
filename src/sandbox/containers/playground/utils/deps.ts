@@ -105,6 +105,7 @@ function loadTexture(name: string): Promise<THREE.Texture> {
         loader.load(
             `${GetAssetsTexturesPath()}/${name}`,
             (texture: THREE.Texture) => {
+                // texture.encoding = THREE.sRGBEncoding;
                 console.log(`texture '${GetAssetsTexturesPath()}/${name}' is loaded.`);
                 resolve(texture);
             },
