@@ -1,6 +1,7 @@
 import { ITechnique11 } from "@lib/idl/ITechnique11";
 import { ITechnique } from "@lib/idl/ITechnique";
-import * as VM from '@lib/fx/bytecode/VM';
+// import * as VM from '@lib/fx/bytecode/VM';
+import * as TSVM from "@lib/fx/bytecode/VM/ts/bridge";
 
 import { BundleT } from "@lib/idl/bundles/auto/fx/bundle";
 import { Technique11BundleT } from "@lib/idl/bundles/auto/technique11_generated";
@@ -10,7 +11,9 @@ function createTechnique11FromBundle(bundle: BundleT): ITechnique11 {
     const tech11 = content as Technique11BundleT;
 
     const passes = tech11.passes.map(({ code, shaders, shadersType }, i) => {
-        const render = VM.make(`pass-${i}`, code);
+        // const render = VM.make(`pass-${i}`, code);
+        // todo: add WASM support 
+        const render = TSVM.make(`pass-${i}`, new Uint8Array(code));
 
         return {
             render,

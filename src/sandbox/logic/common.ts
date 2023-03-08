@@ -1,16 +1,18 @@
 import * as path from '@lib/path/path';
+import * as URI from '@lib/uri/uri';
 import { sourceCode as sourceActions } from '@sandbox/actions';
 import * as evt from '@sandbox/actions/ActionTypeKeys';
 import { ISourceFileRequest } from '@sandbox/actions/ActionTypes';
+import * as ipc from '@sandbox/ipc';
 import * as Depot from '@sandbox/reducers/depot';
 import { history } from '@sandbox/reducers/router';
 import IStoreState from '@sandbox/store/IStoreState';
 import { LocationChangeAction, LOCATION_CHANGE } from 'connected-react-router';
 import { matchPath } from 'react-router';
 import { toast } from 'react-semantic-toasts';
-import 'react-semantic-toasts/styles/react-semantic-alert.css';
 import { createLogic } from 'redux-logic';
-import * as URI from '@lib/uri/uri';
+
+import 'react-semantic-toasts/styles/react-semantic-alert.css';
 
 // hack to resolve unexisting files
 const fetchVirtual = (fname) =>
@@ -82,9 +84,11 @@ export const LOCAL_SESSION_AUTOSAVE = 'local-session-autosave';
 
 export const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.hlsl' ];
 
-export const ASSETS_PATH = './assets/fx/tests';
-export const LIB_PATH = './assets/graph'; // todo: move to more suitable place
+export const ASSETS_PATH = ipc.isElectron() ? './assets' : '/assets';
+export const LIB_PATH = `${ASSETS_PATH}/graph`; // todo: move to more suitable place
 
+// manifest.json is auto generated file created by webpack.sandbox
+export let ASSETS_MANIFEST = await (await fetch(`${ASSETS_PATH}/manifest.json`)).json();
 
 export const SUPPORTED_VIEWS = [ PLAYGROUND_VIEW, BYTECODE_VIEW, PROGRAM_VIEW, AST_VIEW, PREPROCESSOR_VIEW, GRAPH_VIEW ];
 

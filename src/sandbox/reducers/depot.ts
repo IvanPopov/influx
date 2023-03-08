@@ -29,16 +29,15 @@ export async function resolveName(depot: IDepot, name: string): Promise<string>
     const uri = URI.parse(name);
 
     // early exit for web version
-    if (uri.protocol !== 'file') {
-        return name;
+    if (uri.protocol === 'file') {
+        console.assert(ipc.isElectron());
+
+        if (fs.existsSync(URI.toLocalPath(uri))) {
+           debug(`Direct include has been resolved "${name}".`);
+           return name;
+        }
     }
 
-    console.assert(ipc.isElectron());
-
-    if (fs.existsSync(URI.toLocalPath(uri))) {
-       debug(`Direct include has been resolved "${name}".`);
-       return name;
-    }
 
     //
     // Attempt to find any folder including basename of target name

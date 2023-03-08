@@ -312,7 +312,7 @@ void ScanConstanBuffers(std::map<std::string, CBUFFER>& sharedCbufs
                 // std::unique_ptr<TypeLayoutT> type;
                 CBUFFER_FIELD field;
                 field.name = name;
-                field.semantic = semantic.empty() ? semantic : name;
+                field.semantic = !semantic.empty() ? semantic : name;
                 field.size = size;
                 field.padding = padding;
                 field.length = type->length;

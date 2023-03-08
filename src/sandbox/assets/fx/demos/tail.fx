@@ -1,53 +1,4 @@
-
-uniform float elapsedTime: ELAPSED_TIME;
-uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
-uniform float3 parentPosition: PARENT_POSITION;
-
-float random (float2 uv)
-{
-    return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
-}
-
-
-float3 randVUnit (float seed)
-{
-   float3 v;
-   v.x =  random(float2(seed, 0.f)) - 0.5f; 
-   v.y =  random(float2(seed, 1.f)) - 0.5f;
-   v.z =  random(float2(seed, 2.f)) - 0.5f; 
-   return normalize(v);
-}
-
-
-float deg2rad(float deg) 
-{
-    return ((deg) * 3.14f / 180.f);
-}
-
-float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
-{
-   float3   vRand;
-   float3   vBaseScale, vTangScale;
-   float3   v, vTang;
-
-//    if (!normalize(vBaseNorm)) {
-//       return float3(0.f);
-//    }
-
-   v = randVUnit(elapsedTimeLevel);
-   vTang = v - vBaseNorm * dot(v, vBaseNorm);
-
- //  if (sqrt(dot(vTang, vTang)) > 0.0001f)   {
-      vTang = normalize(vTang);
-      angle = deg2rad(random(float2(elapsedTimeLevel, (float)partId * elapsedTime)) * angle);
-      vRand = vBaseNorm * cos(angle) + vTang * sin(angle);
-      vRand = normalize(vRand);
-  // } else   {
-  //    vRand = vBase;
- //  }
-
-   return vRand;
-}
+#include <lib.hlsl>
 
 struct Part {
     float3 speed;
@@ -58,20 +9,13 @@ struct Part {
     int templateIndex;
 };
 
-/* Example of default shader input. */
-// Warning: Do not change layout of this structure!
-struct DefaultShaderInput {
-    //float3 pos : POSITION;
-    float3 pos;
-    float4 color : COLOR0;
-    float  size : SIZE;
-};
 
-
-int Spawn()
+int SpawnRegular()
 {
     return 5;
 }
+
+
 
 void init(out Part part, int partId)
 {
@@ -82,7 +26,7 @@ void init(out Part part, int partId)
     part.speed = RndVUnitConus(float3(0.f, 1.f, 0.f), 45.f, partId);
     part.templateIndex = 0;
 }
-
+ 
 void initChild(out Part part, int partId, float3 pos)
 {
     part.pos = pos;
@@ -94,20 +38,39 @@ void initChild(out Part part, int partId, float3 pos)
 }
 
 /** Return false if you want to kill particle. */
-bool update(inout Part part)
+bool update(inout Part part, int partId)
 {
     
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     if (part.child == false) {
+        part.size = 0.4f; 
         part.pos = parentPosition + part.speed * part.timelife * 3.0f;
-        spawn(1) initChild(part.pos);
+        spawn(1) initChild(part.pos); 
+        draw P0(part);
     } else {
         part.size = (part.timelife - 0.8) / 0.2 * 0.1;
+        draw P1(part);
+       
     }
+
     return part.timelife < 1.0f;
 }
 
-uniform float3 cameraPosition: CAMERA_POSITION;
+struct EMITTER 
+{
+    int i;
+    float time;
+};
+ 
+void SpawnGeneric(inout EMITTER emit)
+{
+    if (elapsedTimeLevel - emit.time > 1.0f) {
+        int n = (int)((sin(elapsedTimeLevel * 100.f) + 1.f) * 5.f);
+        spawn(n) init(); 
+        emit.i += 1;
+        emit.time = elapsedTimeLevel;
+    }
+}
 
 int prerender(inout Part part, inout DefaultShaderInput input)
 {
@@ -126,12 +89,6 @@ int prerender2(inout Part part, inout DefaultShaderInput input)
     return asint(distance(part.pos, cameraPosition));
 }
 
-// Warning: Do not change layout of this structure!
-struct LwiInstance {
-    float4 dynData[2]: META;
-    float3x4 worldMatr: TRANSFORM0;
-    float3x4 worldMatrPrev: TRANSFORM1;
-};
 
 void packLwiTransform(in float3 pos, in float3 speed, in float3 size, out float3x4 matr)
 {
@@ -154,31 +111,108 @@ int prerender3(inout Part part, inout LwiInstance input)
     packLwiTransform(part.pos, part.speed, float3(part.size), input.worldMatr);
     // sorting(part.templateIndex);
     return part.templateIndex % instanceTotal;
-}
+}  
 
+
+struct Geometry {
+    float3 pos: POSITION0;
+    float3 normal: NORMAL0;
+    float2 uv: TEXCOORD0;
+};
+
+
+struct PixelInputType
+{
+    float4 position : POSITION;
+    float4 color : COLOR;
+};
+
+
+
+int prerender4(inout Part part, inout LwiInstance input)
+{
+    // IP: todo: add support of direct matrix assigment
+    // input.worldMatrPrev = input.worldMatr;
+    input.worldMatrPrev[0] = input.worldMatr[0];
+    input.worldMatrPrev[1] = input.worldMatr[1];
+    input.worldMatrPrev[2] = input.worldMatr[2];
+
+    input.worldMatr = packLwiRotXToDir(part.pos, part.speed, float3(part.size));
+    return 0;
+}  
+
+uniform float4x4 modelMatrix;
+uniform float4x4 viewMatrix;
+uniform float4x4 projectionMatrix;
+
+// PixelInputType VSCylinders(LwiInstance partInstance, Geometry geometry)
+// {
+//     PixelInputType res;
+
+//     float3 wnorm;
+//     wnorm = mul(modelMatrix, float4(geometry.normal, 0.f)).xyz;
+
+//     float4 zero = float4(geometry.pos, 1.f);
+    
+//     float4 p;
+//     p.x = dot(partInstance.worldMatr[0], zero);
+//     p.y = dot(partInstance.worldMatr[1], zero);
+//     p.z = dot(partInstance.worldMatr[2], zero);
+//     p.w = 1.f;
+    
+     
+//     res.position = mul(viewMatrix, res.position);
+//     res.position = mul(projectionMatrix, res.position);
+    
+//     // Store the input color for the pixel shader to use.
+//     float3 lightDir;
+//     lightDir = normalize(float3(1.f, 4.f, 0.f));
+
+//     float NdL;
+//     NdL = max(0.f, dot(geometry.normal, lightDir) * 0.5);
+//     res.color = float4(1,1,0,1);//float4(float3(NdL), 0.f) + float4(1, 0, 0, 1.f);
+    
+//     return res;
+// }
+
+
+
+// float4 PSCylinders(PixelInputType input) : COLOR
+// {
+//     return input.color;
+// }
 
 
 partFx project.awesome {
-    Capacity = 1000;
-    SpawnRoutine = compile Spawn();
-    InitRoutine = compile init();
+    Capacity = 8000;
+    SpawnRoutine = compile SpawnGeneric();
     UpdateRoutine = compile update();
 
     pass P0 {
         Sorting = TRUE;
+        PrerenderRoutine = compile prerender4();
+        Geometry = "arrow";
+        // VertexShader = compile VSCylinders();
+        // PixelShader = compile PSCylinders();
+    }
+
+    pass P1 {
+        Sorting = TRUE;
         PrerenderRoutine = compile prerender();
+        Geometry = Sphere;
     }
 }
 
 
 partFx some.example {
     Capacity = 1000;
-    SpawnRoutine = compile Spawn();
+    SpawnRoutine = compile SpawnRegular();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 
-    pass P0 {
+    pass P0 { 
         Sorting = TRUE;
+        Geometry = Sphere;
         PrerenderRoutine = compile prerender2();
     }
 }
@@ -186,7 +220,7 @@ partFx some.example {
 
 partFx lwi {
     Capacity = 1000;
-    SpawnRoutine = compile Spawn();
+    SpawnRoutine = compile SpawnRegular();
     InitRoutine = compile init();
     UpdateRoutine = compile update();
 

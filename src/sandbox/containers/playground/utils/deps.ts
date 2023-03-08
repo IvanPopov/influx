@@ -1,5 +1,7 @@
+import { isString } from '@lib/common';
 import { IMap } from '@lib/idl/IMap';
 import * as ipc from '@sandbox/ipc';
+import { ASSETS_MANIFEST, ASSETS_PATH } from '@sandbox/logic/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as THREE from 'three';
@@ -13,11 +15,11 @@ export interface IDeps {
 
 
 function GetAssetsTexturesPath() {
-    return "./assets/textures";
+    return `${ASSETS_PATH}/textures`;
 }
 
 function GetAssetsModelsPath() {
-    return "./assets/models";
+    return `${ASSETS_PATH}/models`;
 }
 
 
@@ -31,10 +33,10 @@ function currentPath() {
 
 export function GetAssetsTextures() {
     if (!ipc.isElectron()) {
-        return [
-            'saber-logo.png',
-            'checker2x2.png'
-        ];
+        return <string[]>Object.values(ASSETS_MANIFEST['textures'])
+        .filter(file => isString(file))
+        .map(file => path.basename(<string>file)) 
+        .sort();
     } else {
         const sandboxPath = path.dirname(currentPath());
         const texturePath = path.join(sandboxPath, GetAssetsTexturesPath());
@@ -45,10 +47,10 @@ export function GetAssetsTextures() {
 
 export function GetAssetsModels() {
     if (!ipc.isElectron()) {
-        return [
-            'cube.obj',
-            'probe.obj'
-        ];
+        return <string[]>Object.values(ASSETS_MANIFEST['models'])
+        .filter(file => isString(file))
+        .map(file => path.basename(<string>file)) 
+        .sort();
     } else {
         const sandboxPath = path.dirname(currentPath());
         const texturePath = path.join(sandboxPath, GetAssetsModelsPath());

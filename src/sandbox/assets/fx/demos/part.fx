@@ -2,6 +2,30 @@
 uniform float elapsedTime: ELAPSED_TIME;
 uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
 
+int density <
+  string UIName = "Density";
+> = 50;  
+ 
+float scale <
+  string UIType = "slider";
+  string UIName = "Scale";
+  float UIMin = 0.f;
+  float UIMax = 1.0f;  
+> = {1.f};  
+
+float size <
+  string UIType = "slider";
+  string UIName = "Size";
+  float UIMin = 0.001f;
+  float UIMax = 2.0f;  
+> = {1.f}; 
+ 
+
+float4 color <
+    string UIType = "Color";
+> = {1.f, 0.f, 1.f, 1.f};
+
+
 float random (float2 uv)
 {
     return frac(sin(dot(uv, float2(12.9898f, 78.233f))) * 43758.5453123f);
@@ -55,9 +79,9 @@ struct DefaultShaderInput {
 
 int Spawn()
 {
-    return 50;
+    return density;
 }
-
+ 
 void init(out Part part, int partId)
 {
     part.pos = float3(0.f, float2(0.0).x, 0.0);
@@ -69,27 +93,27 @@ void init(out Part part, int partId)
 /** Return false if you want to kill particle. */
 bool update(inout Part part)
 {
-    part.pos = part.speed * part.timelife * 3.0f;
+    part.pos = part.speed * part.timelife * 3.0f * size;
     part.timelife = (part.timelife + elapsedTime / 3.0f);
     return part.timelife < 1.0f;
 }
 
 uniform float3 cameraPosition: CAMERA_POSITION;
 
-int prerender(inout Part part, inout DefaultShaderInput input)
+int prerender2(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos.xyz;
-    input.size = part.size;
+    input.size = part.size * scale;
     input.color = float4(abs(part.speed), 1.0f - part.timelife);
     return asint(distance(part.pos, cameraPosition));
 }
 
 
-int prerender2(inout Part part, inout DefaultShaderInput input)
+int prerender(inout Part part, inout DefaultShaderInput input)
 {
     input.pos.xyz = part.pos.xyz;
-    input.size = part.size;
-    input.color = float4(float3(1.0f, 0.f, 0.f), 1.0f - part.timelife);
+    input.size = part.size * scale;
+    input.color = float4(float3(1.0f, 1.f, 1.f), 1.0f - part.timelife) * color;
     return asint(distance(part.pos, cameraPosition));
 }
 
@@ -104,6 +128,12 @@ partFx project.awesome {
         Sorting = TRUE;
         PrerenderRoutine = compile prerender();
     }
+
+    preset X {
+        density = 10; 
+        scale = {2.f};
+        color = {1, 0, 0, 1}; 
+    }
 }
 
 
@@ -117,4 +147,5 @@ partFx some.example {
         Sorting = TRUE;
         PrerenderRoutine = compile prerender2();
     }
+
 }

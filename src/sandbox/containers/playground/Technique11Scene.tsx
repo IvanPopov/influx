@@ -22,6 +22,7 @@ import { SingleUniforms } from './utils/SingleUniforms';
 import { CBBundleT } from '@lib/idl/bundles/auto/cbbundle';
 import { PixelShaderT } from '@lib/idl/bundles/auto/fx/pixel-shader';
 import { VertexShaderT } from '@lib/idl/bundles/auto/fx/vertex-shader';
+import { ASSETS_PATH } from '@sandbox/logic/common';
 
 
 interface IProps extends ITreeSceneProps {
@@ -168,7 +169,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         }
 
         loader.load(
-            `./assets/models/${params.model}.obj`,
+            `${ASSETS_PATH}/models/${params.model}.obj`,
             (group: THREE.Group) => {
 
                 this.groups = Array(passCount).fill(null).map(x => group.clone(true));

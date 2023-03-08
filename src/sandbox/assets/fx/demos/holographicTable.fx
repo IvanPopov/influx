@@ -1,8 +1,4 @@
-#include "auxiliary/noise.fx"
-
-uniform float elapsedTime;
-uniform float elapsedTimeLevel;
-uniform float3 cameraPosition: CAMERA_POSITION;
+#include <lib.hlsl>
 
 float3 randUnitCircle(uint partId) 
 {

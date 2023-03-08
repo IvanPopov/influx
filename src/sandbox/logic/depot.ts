@@ -5,46 +5,29 @@ import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ASSETS_PATH, DEFAULT_FILENAME, EXT_FILTER, LIB_PATH } from './common';
+import { ASSETS_MANIFEST, ASSETS_PATH, DEFAULT_FILENAME, EXT_FILTER, LIB_PATH } from './common';
+import { isString } from '@lib/common';
 
+async function feedFakeDepot(root: IDepotFolder) {
+    let demos = depotNode();
+    demos.files = <string[]>Object.values(ASSETS_MANIFEST['fx']['demos'])
+    .filter(file => isString(file))
+    .map(file => `/${file}`) 
+    .sort();
+    demos.path = '/demos';
+    demos.totalFiles = demos.files.length;
 
-function feedFakeDepot(root: IDepotFolder) {
-    root.files = [
-        '@new',
-        'annotations.fx',
-        'autotests.fx',
-        'basic.fx',
-        'call.fx',
-        'CSShader.fx',
-        'errorHandling.fx',
-        'funcDecl.fx',
-        'holographicTable.fx',
-        'light.fx',
-        'lwi.fx',
-        'macro.fx',
-        'messy.fx',
-        'numeric.fx',
-        'part.fx',
-        'part.xfx',
-        'speed.fx',
-        'sphere.fx',
-        'swizzling.fx',
-        'tail.fx',
-        'tree.fx'
-    ].map(file => `${ASSETS_PATH}/${file}`).sort();
-    root.path = 'tests';
-    root.totalFiles = 23;
-    
-    const aux: IDepotFolder = {
-        path: 'tests/auxiliary',
-        files: [
-            'noise.fx',
-            'random.fx'
-        ].map(file => `${ASSETS_PATH}/auxiliary/${file}`).sort(),
-        totalFiles: 2
-    };
+    let graph = depotNode();
+    graph.files = <string[]>Object.values(ASSETS_MANIFEST['graph'])
+    .filter(file => isString(file))
+    .map(file => `/${file}`) 
+    .sort();
+    graph.path = '/graph';
+    graph.totalFiles = graph.files.length;
 
-    root.folders = [ aux ];
+    root.folders = [ demos, graph ];
+    root.path = '/';
+    root.totalFiles = demos.totalFiles + graph.totalFiles;
 }
 
 
@@ -111,7 +94,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
         const sandboxPath = path.dirname(currentPath());
 
         if (!ipc.isElectron()) {
-            feedFakeDepot(root);
+            await feedFakeDepot(root);
         } else {
             if (env) {
                 let sfxFolder = depotNode();
@@ -128,7 +111,7 @@ const depotUpdateRequestLogic = createLogic<IStoreState>({
                 root.folders = [ sfxFolder, shaderFolder, libFolder ];
                 root.totalFiles = sfxFolder.totalFiles + shaderFolder.totalFiles;
             } else {
-                let rootPath = path.join(sandboxPath, ASSETS_PATH); 
+                let rootPath = path.join(sandboxPath, `${ASSETS_PATH}/fx/demos`); 
                 await scan(rootPath, root, EXT_FILTER);
             }
 

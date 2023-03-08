@@ -1,11 +1,7 @@
 
-#include "auxiliary/noise.fx"
+#include <lib.hlsl>
 
 
-uniform float elapsedTime: ELAPSED_TIME;
-uniform float elapsedTimeLevel: ELAPSED_TIME_LEVEL;
-uniform float3 parentPosition: PARENT_POSITION;
-uniform float3 cameraPosition: CAMERA_POSITION;
 // instanceTotal avaialable in prerender pass for known TPL
 uniform uint   instanceTotal: INSTANCE_TOTAL; // number of difference lwi instances
 
@@ -18,27 +14,6 @@ float3 randUnitCircle(uint partId)
 }
 
 
-float deg2rad(float deg) 
-{
-    return ((deg) * 3.14f / 180.f);
-}
-
-float3 RndVUnitConus (float3 vBaseNorm, float angle, int partId = 0)
-{
-    float3   vRand;
-    float3   vBaseScale, vTangScale;
-    float3   v, vTang;
-
-    v = randVUnit(elapsedTimeLevel);
-    vTang = v - vBaseNorm * dot(v, vBaseNorm);
-
-    vTang = normalize(vTang);
-    angle = deg2rad(random(float2(elapsedTimeLevel, (float)partId * elapsedTime)) * angle);
-    vRand = vBaseNorm * cos(angle) + vTang * sin(angle);
-    vRand = normalize(vRand);
-    return vRand;
-}
-
 struct Part {
     float3 speed;
     float3 pos : POSITION;
@@ -46,14 +21,6 @@ struct Part {
     float timelife;
     uint templateIndex;
 };
-
-// Warning: Do not change layout of this structure!
-struct LwiInstance {
-    float4 dynData[2]: META;
-    float3x4 worldMatr: TRANSFORM0;
-    float3x4 worldMatrPrev: TRANSFORM1;
-};
-
 
 /////////////////////////////////////////////////////////////////////
 // Spawn Routine

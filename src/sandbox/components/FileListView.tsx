@@ -1,6 +1,5 @@
 /* tslint:disable:typedef */
 
-import { isArray } from '@lib/common';
 import { IDepotFolder } from '@sandbox/store/IStoreState';
 import * as path from 'path';
 import * as React from 'react';

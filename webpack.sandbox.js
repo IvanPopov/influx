@@ -14,7 +14,7 @@ const gitRevisionPlugin = new GitRevisionPlugin()
 
 const [, , command, value] = process.argv;
 
-const locate = (filename) => process.env.PATH.split(/[:;]/).find(dir => fs.existsSync(path.join(dir, filename))); 
+const locate = (filename) => process.env.PATH.split(/[:;]/).find(dir => fs.existsSync(path.join(dir, filename)));
 
 const isWeb = (process.env.APP_TARGET && process.env.APP_TARGET.toUpperCase() === 'WEB');
 const srcPath = `${__dirname}/src`;
@@ -32,6 +32,18 @@ const DEVELOPMENT = mode == 'development';
 const PRODUCTION = mode == 'production';
 const ENABLE_PROFILING = false;             // turn it on to compile minified version with source map support enabled
 
+function emitFolderManifest(dir, root = dir) {
+    const cont = fs.readdirSync(dir);
+    const res = {};
+    cont.forEach(name => {
+        const sub = path.join(dir, name);
+        if (fs.statSync(sub).isDirectory()) 
+            res[name] = emitFolderManifest(sub, root);
+        else    
+            res[name] = path.relative(root, sub).replace(new RegExp('\\' + path.sep, 'g'), '/');
+    });
+    return res;
+}
 
 let optimization = {
     nodeEnv: mode,
@@ -167,16 +179,16 @@ let options = {
                     options: {
                         sourceMaps: !PRODUCTION,
                         // debug: !PRODUCTION, // uncomment to build with -O0 instead of -O3
-                        additionalFlags: [ 
-                             `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
-                         ].map(f => f.replace(/\\/g, '/')),
+                        additionalFlags: [
+                            `-I${__dirname}\\src\\lib\\idl\\bundles\\` // << flatbuffers root
+                        ].map(f => f.replace(/\\/g, '/')),
                         defines: { EMCC_ENV: 1 } // to indicate that we are inside of emcc enviroment
                     }
                 }
             },
-            { 
-                test: /\.json$/, 
-                type: 'json' 
+            {
+                test: /\.json$/,
+                type: 'json'
             }
         ]
     },
@@ -208,7 +220,16 @@ let options = {
                     context: `${sandboxPath}/assets/`,
                     from: `**/*`,
                     to: `${outputPath}/assets`
-                }
+                },
+                // copy empty file in order to fill it with list of
+                // files presented 
+                {
+                    from: `${sandboxPath}/assets/manifest.json`,
+                    to:   `${outputPath}/assets/manifest.json`,
+                    transform (content, path) {
+                        return JSON.stringify(emitFolderManifest(`${sandboxPath}/assets/`, sandboxPath), null, '   ');
+                    }
+                 }
             ]
         }),
         new HtmlWebpackPlugin({

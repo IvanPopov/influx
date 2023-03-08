@@ -10,19 +10,27 @@
 //--------------------------------------------------------------------------------------
 // Global variables
 //--------------------------------------------------------------------------------------
-float4 g_MaterialAmbientColor;      // Material's ambient color
-float4 g_MaterialDiffuseColor;      // Material's diffuse color
+float4 g_MaterialAmbientColor<string UIName = "Ambient Color"; string UIType = "color";> = { 1.f, 1.f, 1.f, 1.f };      // Material's ambient color
+float4 g_MaterialDiffuseColor<string UIName = "Diffuse Color"; string UIType = "color";> = { 1.f, 1.f, 1.f, 1.f };      // Material's diffuse color
 int g_nNumLights;
+ 
+float3 g_LightDir[3]<string UIName = "Light Dir";> = {               // Light's direction in world space
+    { 0.7, 0.7, 0.f },
+    { 0.f, 1.f, 0.f },
+    { 0.f, 0.f, 1.f } 
+};
+float4 g_LightDiffuse[3]<string UIName = "Light Diffuse";> = { // Light's diffuse color
+    { 2.f, 2.f, 2.f, 0.f },
+    { 1.f, 1.f, 1.f, 0.f },
+    { 1.f, 1.f, 1.f, 0.f }
+};           
+float4 g_LightAmbient<string UIName = "Light Ambient";> = { 0.5f, 0.5f, 0.5f, 0.f };              // Light's ambient color 
 
-float3 g_LightDir[3];               // Light's direction in world space
-float4 g_LightDiffuse[3];           // Light's diffuse color
-float4 g_LightAmbient;              // Light's ambient color
+Texture2D g_MeshTexture<string UIName = "Mesh Texture";string name = "uv_checker.png";>;             // Color texture for mesh
 
-Texture2D g_MeshTexture;            // Color texture for mesh
-
-float    g_fTime;                   // App's time in seconds
-float4x4 g_mWorld;                  // World matrix for object
-float4x4 g_mWorldViewProjection;    // World * View * Projection matrix
+float    g_fTime: ELAPSED_TIME_LEVEL;                               // App's time in seconds
+float4x4 g_mWorld: MODEL_MATRIX;                                    // World matrix for object
+float4x4 g_mWorldViewProjection: MODEL_VIEW_PROJECTION_MATRIX;      // World * View * Projection matrix
 
 //--------------------------------------------------------------------------------------
 // DepthStates
@@ -42,8 +50,10 @@ SamplerState MeshTextureSampler
     Filter = MIN_MAG_MIP_LINEAR;
     AddressU = Wrap;
     AddressV = Wrap;
-};
+}; 
 
+
+SamplerState samLinear : register( s1 );
 
 //--------------------------------------------------------------------------------------
 // Vertex shader output structure
@@ -83,7 +93,7 @@ VS_OUTPUT RenderSceneVS( float4 vPos : POSITION,
     
     // Compute simple directional lighting equation
     float3 vTotalLightDiffuse = float3(0,0,0);
-    for(int i=0; i<nNumLights; i++ )
+    for(int i=0; i<nNumLights; i++ ) 
         vTotalLightDiffuse += g_LightDiffuse[i] * max(0,dot(vNormalWorldSpace, g_LightDir[i]));
         
     Output.Diffuse.rgb = g_MaterialDiffuseColor * vTotalLightDiffuse + 
@@ -128,14 +138,16 @@ PS_OUTPUT RenderScenePS( VS_OUTPUT In,
 }
 
 
+
 //--------------------------------------------------------------------------------------
 // Renders scene to render target using D3D11 Techniques
 //--------------------------------------------------------------------------------------
+
 technique11 RenderSceneWithTexture1Light
 {
     pass P0
     {
-        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, true ) ) );
+        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, false ) ) );
         SetGeometryShader( NULL );
         SetPixelShader( CompileShader( ps_4_0_level_9_1, RenderScenePS( true ) ) );
 
@@ -147,7 +159,7 @@ technique11 RenderSceneWithTexture2Light
 {
     pass P0
     {          
-        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 2, true, true ) ) );
+        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 2, true, false ) ) );
         SetGeometryShader( NULL );
         SetPixelShader( CompileShader( ps_4_0_level_9_1, RenderScenePS( true ) ) ); 
         
@@ -159,7 +171,7 @@ technique11 RenderSceneWithTexture3Light
 {
     pass P0
     {          
-        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 3, true, true ) ) );
+        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 3, true, false ) ) );
         SetGeometryShader( NULL );
         SetPixelShader( CompileShader( ps_4_0_level_9_1, RenderScenePS( true ) ) );
 
@@ -171,7 +183,7 @@ technique11 RenderSceneNoTexture
 {
     pass P0
     {          
-        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, true ) ) );
+        SetVertexShader( CompileShader( vs_4_0_level_9_1, RenderSceneVS( 1, true, false ) ) );
         SetGeometryShader( NULL );
         SetPixelShader( CompileShader( ps_4_0_level_9_1, RenderScenePS( false ) ) );
 
