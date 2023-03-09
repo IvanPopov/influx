@@ -38,7 +38,7 @@ function size(div: HTMLDivElement, pixelRatio: number) {
 
 function restoreHdrParams(): HdrParams {
     const params: HdrParams = {        
-        bloom: true,
+        bloom: false,
         toneMappingType: 'Linear',
         toneMappingExposure: 1.0,
         bloomStrength: 2.0,
@@ -47,7 +47,7 @@ function restoreHdrParams(): HdrParams {
     };
 
     params.bloom = isString(localStorage.bloom) ? localStorage.bloom === 'true' : params.bloom;
-    params.toneMappingType = localStorage.toneMappingType || 'ACESFilmic';
+    params.toneMappingType = localStorage.toneMappingType || params.bloom;
     params.toneMappingExposure = Number(localStorage.toneMappingExposure || params.toneMappingExposure);
     params.bloomThreshold = Number(localStorage.bloomThreshold || params.bloomThreshold);
     params.bloomStrength = Number(localStorage.bloomStrength || params.bloomStrength);

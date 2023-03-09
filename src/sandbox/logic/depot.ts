@@ -5,14 +5,14 @@ import * as URI from '@lib/uri/uri';
 import * as ipc from '@sandbox/ipc';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ASSETS_MANIFEST, ASSETS_PATH, DEFAULT_FILENAME, EXT_FILTER, LIB_PATH } from './common';
+import { ASSETS_MANIFEST, ASSETS_PATH, DEFAULT_FILENAME, DEPOT_PATH, EXT_FILTER, LIB_PATH } from './common';
 import { isString } from '@lib/common';
 
 async function feedFakeDepot(root: IDepotFolder) {
     let demos = depotNode();
     demos.files = <string[]>Object.values(ASSETS_MANIFEST['fx']['demos'])
     .filter(file => isString(file))
-    .map(file => `/${file}`) 
+    .map(file => `${DEPOT_PATH}${file}`) 
     .sort();
     demos.path = '/demos';
     demos.totalFiles = demos.files.length;
@@ -20,7 +20,7 @@ async function feedFakeDepot(root: IDepotFolder) {
     let graph = depotNode();
     graph.files = <string[]>Object.values(ASSETS_MANIFEST['graph'])
     .filter(file => isString(file))
-    .map(file => `/${file}`) 
+    .map(file => `${DEPOT_PATH}${file}`) 
     .sort();
     graph.path = '/graph';
     graph.totalFiles = graph.files.length;

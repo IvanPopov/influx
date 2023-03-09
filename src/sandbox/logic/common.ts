@@ -84,7 +84,8 @@ export const LOCAL_SESSION_AUTOSAVE = 'local-session-autosave';
 
 export const EXT_FILTER = ['.fx', '.xfx', '.vsh', '.psh', '.csh', '.vs', '.ps', '.hlsl' ];
 
-export const ASSETS_PATH = ipc.isElectron() ? './assets' : '/assets';
+export const DEPOT_PATH = ipc.isElectron() ? `./` : `${window.location.pathname}`;
+export const ASSETS_PATH = `${DEPOT_PATH}assets`;
 export const LIB_PATH = `${ASSETS_PATH}/graph`; // todo: move to more suitable place
 
 // manifest.json is auto generated file created by webpack.sandbox
