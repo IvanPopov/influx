@@ -394,6 +394,9 @@ export const BLEND_STATE = 'BlendState';
 export const DEPTH_STENCIL_STATE = 'DepthStencilState';
 export const RASTERIZER_STATE = 'RasterizerState';
 
+export const RENDER_TARGET_VIEW = 'RenderTargetView';
+export const DEPTH_STENCIL_VIEW = 'DepthStencilView';
+
 export const SHADER_TYPES = [
     'VertexShader',
     'PixelShader',
@@ -414,12 +417,18 @@ export const isSamplerState = (type: ITypeInstruction) => SAMPLER_TYPES.includes
 export const isBlendState = (type: ITypeInstruction) => [BLEND_STATE].includes(type.name);
 export const isDepthStencilState = (type: ITypeInstruction) => [DEPTH_STENCIL_STATE].includes(type.name);
 export const isRasterizerState = (type: ITypeInstruction) => [RASTERIZER_STATE].includes(type.name);
+// note: arrays like "RenderTargetView[5]" also return true in this checks (!)
+export const isRenderTargetView = (type: ITypeInstruction) => [RENDER_TARGET_VIEW].includes(type.name);
+export const isDepthStencilView = (type: ITypeInstruction) => [DEPTH_STENCIL_VIEW].includes(type.name);
 
 // note: arrays like "BlendState[5]" also return true in this checks (!)
 export const isPipelineState = (type: ITypeInstruction) => [
     BLEND_STATE,
     DEPTH_STENCIL_STATE,
-    RASTERIZER_STATE
+    RASTERIZER_STATE,
+
+    RENDER_TARGET_VIEW,
+    DEPTH_STENCIL_VIEW
 ].includes(type.name);
 
 export const isShaderType = (type: ITypeInstruction) => SHADER_TYPES.includes(types.signature(type));

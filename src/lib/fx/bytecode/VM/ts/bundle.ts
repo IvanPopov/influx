@@ -10,35 +10,33 @@ import { IMap } from "@lib/idl/IMap";
 
 import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
 import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
+import { ERenderTargetFormats } from "@lib/idl/bytecode/IRenderTargetView";
 
 
 let { EChunkType, EOperation } = Bundle;
 
-interface TSBundleMemory extends Bundle.IMemory
-{
+interface TSBundleMemory extends Bundle.IMemory {
     buffer: Int32Array;
 }
 
-export function asBundleMemory(data: ArrayBufferView): TSBundleMemory
-{
-    const buffer = data instanceof Int32Array 
-        ? data 
+export function asBundleMemory(data: ArrayBufferView): TSBundleMemory {
+    const buffer = data instanceof Int32Array
+        ? data
         : new Int32Array(data.buffer, data.byteOffset, data.byteLength >> 2);
     return { buffer };
 }
 
-export function fromBundleMemory(mem: Bundle.IMemory)
-{
+export function fromBundleMemory(mem: Bundle.IMemory) {
     return (<TSBundleMemory>mem).buffer;
 }
 
 
 function slotToShaderLikeRegister(slot: number) {
-    if (slot >= CBUFFER0_REGISTER && slot - CBUFFER0_REGISTER < CBUFFER_TOTAL) 
+    if (slot >= CBUFFER0_REGISTER && slot - CBUFFER0_REGISTER < CBUFFER_TOTAL)
         return `b${slot - CBUFFER0_REGISTER}`;
-    if (slot >= SRV0_REGISTER && slot - SRV0_REGISTER < SRV_TOTAL) 
+    if (slot >= SRV0_REGISTER && slot - SRV0_REGISTER < SRV_TOTAL)
         return `t${slot - SRV0_REGISTER}`;
-    if (slot >= UAV0_REGISTER && slot - UAV0_REGISTER < UAV_TOTAL) 
+    if (slot >= UAV0_REGISTER && slot - UAV0_REGISTER < UAV_TOTAL)
         return `u${slot - UAV0_REGISTER}`;
     return `[ invalid slot | ${slot} ]`;
 }
@@ -51,12 +49,12 @@ function exposeInvalidInputError(iinput: Int32Array[], slot: number) {
 }
 
 
-export class TSBundle implements Bundle.IBundle
-{
+export class TSBundle implements Bundle.IBundle {
     private instructions: Uint32Array;
     private inputs: Int32Array[];
     private layout: Bundle.IConstant[];
     private depthStencilStates: Bundle.IDepthStencilState[];
+    private renderTargetViews: Bundle.IRenderTargetView[];
     private shaders: Bundle.IShader[];
     private externs: Bundle.IExtern[];
     private ncalls: Function[];         // native calls
@@ -71,14 +69,13 @@ export class TSBundle implements Bundle.IBundle
     private static GTid = new Int32Array([0, 0, 0]);    // uint3 GTid: SV_GroupThreadID
     private static DTid = new Int32Array([0, 0, 0]);    // uint3 DTid: SV_DispatchThreadID
 
-    constructor(public debugName: string, data: Uint8Array)
-    {
+    constructor(public debugName: string, data: Uint8Array) {
         this.load(data);
     }
 
     private load(code: Uint8Array) {
         const chunks = decodeChunks(code);
-    
+
         const codeChunk = chunks[EChunkType.k_Code];
         assert(isDefAndNotNull(codeChunk) && isDefAndNotNull(chunks[EChunkType.k_Constants]));
 
@@ -86,17 +83,18 @@ export class TSBundle implements Bundle.IBundle
         this.instructions = decodeCodeChunk(codeChunk);
         this.layout = decodeLayoutChunk(chunks[EChunkType.k_Layout]);
         this.depthStencilStates = decodeDepthStencilStates(chunks[EChunkType.k_DepthStencilStates]);
-        this.shaders = decodeShadersChunk(chunks[EChunkType.k_Shaders]);
+        this.renderTargetViews = [ null, ...decodeRenderTargetViews(chunks[EChunkType.k_RenderTargetViews]) ]; // first element reserved for NULL
+        this.shaders = [ null, ...decodeShadersChunk(chunks[EChunkType.k_Shaders]) ];                          // first element reserved for NULL
         this.externs = decodeExternsChunk(chunks[EChunkType.k_Externs]);
         this.inputs = Array<Int32Array>(64).fill(null);
         this.inputs[CBUFFER0_REGISTER] = new Int32Array(constants.buffer, constants.byteOffset, constants.length >> 2);
 
-        const undefFn = (extern: Bundle.IExtern) => (a, b, c, d, e, f) => { 
-            console.error(`[native call <${extern.name}> was not provided]`, [a, b, c, d, e, f].filter(x => isDef(x))); 
+        const undefFn = (extern: Bundle.IExtern) => (a, b, c, d, e, f) => {
+            console.error(`[native call <${extern.name}> was not provided]`, [a, b, c, d, e, f].filter(x => isDef(x)));
         };
 
-        const traceFn = (a, b, c, d, e, f, g, h, i, j, k) => { 
-            console.log(...[a, b, c, d, e, f, g, h, i, j, k].filter(x => isDef(x))); 
+        const traceFn = (a, b, c, d, e, f, g, h, i, j, k) => {
+            console.log(...[a, b, c, d, e, f, g, h, i, j, k].filter(x => isDef(x)));
         };
 
         this.ncalls = Array<Function>(this.externs.length).fill(null).map(
@@ -107,29 +105,40 @@ export class TSBundle implements Bundle.IBundle
     private asNative(u8: Uint8Array, layout: TypeLayoutT): any {
         switch (layout.name) {
             // IP: experimental way to resolve string (useful for debug purposes like trace())
-            case 'string': {
-                let byteOffset = u8ArrayToI32(u8);
-                let i32a = this.inputs[CBUFFER0_REGISTER];
-                let len = i32a[byteOffset >> 2];
-                let u8a = new Uint8Array(i32a.buffer, i32a.byteOffset + byteOffset + 4, len);
-                return String.fromCharCode(...u8a);
-            }
-            case 'DepthStencilState': {
-                let id = u8ArrayToI32(u8);
-                return this.depthStencilStates[id];
-            }
-            case 'VertexShader':
-            case 'PixelShader': 
-            case 'GeometryShader': {
-                let id = u8ArrayToI32(u8);
-                if (id == 0) // NULL was passed as shader
+            case 'string':
+                {
+                    let byteOffset = u8ArrayToI32(u8);
+                    let i32a = this.inputs[CBUFFER0_REGISTER];
+                    let len = i32a[byteOffset >> 2];
+                    let u8a = new Uint8Array(i32a.buffer, i32a.byteOffset + byteOffset + 4, len);
+                    return String.fromCharCode(...u8a);
+                }
+            case 'DepthStencilState':
+                {
+                    let id = u8ArrayToI32(u8);
+                    return this.depthStencilStates[id];
+                }
+            case 'RenderTargetView':
+                {
+                    let id = u8ArrayToI32(u8);
+                    return this.renderTargetViews[id];
+                }
+            case 'DepthStencilView':
+                {
+                    let id = u8ArrayToI32(u8);
                     return null;
-                return this.shaders[id - 1];
-            }
+                }
+            case 'VertexShader':
+            case 'PixelShader':
+            case 'GeometryShader':
+                {
+                    let id = u8ArrayToI32(u8);
+                    return this.shaders[id];
+                }
         }
         return asNativeRaw(u8, layout);
     }
-    
+
 
     play(): Uint8Array {
         const ilist = this.instructions;
@@ -146,7 +155,7 @@ export class TSBundle implements Bundle.IBundle
             let b = ilist[i5 + 2];
             let c = ilist[i5 + 3];
             let d = ilist[i5 + 4];
-            
+
             switch (op) {
                 // registers
                 case EOperation.k_I32SetConst:
@@ -202,7 +211,7 @@ export class TSBundle implements Bundle.IBundle
                     // assert(iregs.length > c);
                     iinput[a][iregs[b] + d] = iregs[c];
                     break;
-                
+
                 case EOperation.k_I32TextureLoad:
                     // a - destination  (always float4)
                     // b - texture      (input index)
@@ -221,10 +230,10 @@ export class TSBundle implements Bundle.IBundle
                         const iG = (texel >> 8) & 0xFF;
                         const iB = (texel >> 16) & 0xFF;
                         const iA = (texel >> 24) & 0xFF;
-                        fregs.set([ iR / 255.0, iG / 255.0, iB / 255.0, iA / 255.0 ], a);
+                        fregs.set([iR / 255.0, iG / 255.0, iB / 255.0, iA / 255.0], a);
                     }
                     break;
-                
+
                 case EOperation.k_I32ExternCall:
                     {
                         const id = a;
@@ -233,7 +242,7 @@ export class TSBundle implements Bundle.IBundle
                         // todo: support out arguments
                         let paramOffset = retOffset + ret.size;
                         let args = new Array(params.length);
-                        for (let i = 0; i < params.length; ++ i) {
+                        for (let i = 0; i < params.length; ++i) {
                             let p = params[i];
                             let u8 = regs.subarray(paramOffset, paramOffset + p.size);
                             args[i] = this.asNative(u8, p);
@@ -270,7 +279,7 @@ export class TSBundle implements Bundle.IBundle
                 case EOperation.k_I32Mad:
                     iregs[a] = iregs[b] + iregs[c] * iregs[d];
                     break;
-                
+
                 case EOperation.k_I32Min:
                     iregs[a] = Math.min(iregs[b], iregs[c]);
                     break;
@@ -480,14 +489,14 @@ export class TSBundle implements Bundle.IBundle
         const layout = this.layout;
         const reflection = layout.find(entry => entry.name === name);
         const constants = this.inputs[CBUFFER0_REGISTER];
-    
+
         if (!reflection) {
             return false;
         }
-    
+
         const dst = new DataView(constants.buffer, constants.byteOffset + reflection.offset);
         const src = new DataView(value.buffer, value.byteOffset);
-    
+
         // TODO: validate layout / constant type in memory / size
         switch (reflection.type) {
             case 'float':
@@ -517,7 +526,7 @@ export class TSBundle implements Bundle.IBundle
             default:
                 assert(false, 'unsupported');
         }
-    
+
         return true;
     }
 
@@ -529,12 +538,15 @@ export class TSBundle implements Bundle.IBundle
         return this.externs;
     }
 
+    getRenderTargets(): Bundle.IRenderTargetView[] {
+        return this.renderTargetViews.slice(1);
+    }
+
     setExtern(id: number, extern: Function): void {
         this.ncalls[id] = extern;
     }
 
-    static resetRegisters()
-    {
+    static resetRegisters() {
         TSBundle.regs.fill(0);
     }
 
@@ -542,28 +554,28 @@ export class TSBundle implements Bundle.IBundle
         const counterSize = sizeof.i32();
         const size = counterSize + length * elementSize; // in bytes
         assert(size % sizeof.i32() === 0);
-    
+
         const index = Bytecode.UAV0_REGISTER + register;
-    
+
         const memory = asBundleMemory(new Int32Array(size >> 2));
         const data = asBundleMemory(memory.buffer.subarray(counterSize >> 2));
-        
+
         const counter = memory.buffer.subarray(0, 1);
-    
+
         counter[0] = 0; // reset counter
-    
+
         return {
             name,
             // byte length of a single element
             elementSize,
             // number of elements
-            length, 
+            length,
             // register specified in the shader
             register,
-    
+
             // [ elements ]
             data,
-    
+
             // raw data [ counter, ...elements ]
             buffer: memory,
             // input index for VM
@@ -586,8 +598,7 @@ export function decodeChunks(code: Uint8Array, chunks?: ChunkMap): ChunkMap {
     let content: Uint8Array = null;
     try {
         content = new Uint8Array(code.buffer, code.byteOffset + 8, byteLength);
-    } catch (e)
-    {
+    } catch (e) {
         console.log(e);
     }
 
@@ -639,7 +650,7 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.IConstant[] {
         readed += 4;
         const size = u8ArrayToI32(layoutChunk.subarray(readed, readed + 4));
         readed += 4;
-        
+
         layout.push({ name, type, offset, size, semantic });
     }
     return layout;
@@ -647,7 +658,7 @@ export function decodeLayoutChunk(layoutChunk: Uint8Array): Bundle.IConstant[] {
 
 export function decodeShadersChunk(shadersChunk: Uint8Array): Bundle.IShader[] {
     if (!shadersChunk) {
-        return null;
+        return [];
     }
 
     let readed = 0;
@@ -705,11 +716,11 @@ export function decodeDepthStencilStates(dssChunk: Uint8Array): Bundle.IDepthSte
     }
 
     let readed = 0;
-    let shadersCount = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
+    let dssCount = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
     readed += 4;
 
     let states: Bundle.IDepthStencilState[] = [];
-    for (let i = 0; i < shadersCount; ++i) {
+    for (let i = 0; i < dssCount; ++i) {
         const DepthEnable = !!u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
         readed += 4;
         const DepthWriteMask = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
@@ -741,7 +752,7 @@ export function decodeDepthStencilStates(dssChunk: Uint8Array): Bundle.IDepthSte
         const BackFaceStencilFunc = u8ArrayToI32(dssChunk.subarray(readed, readed + 4));
         readed += 4;
 
-        states.push({ 
+        states.push({
             DepthEnable,
             DepthWriteMask,
             DepthFunc,
@@ -760,9 +771,37 @@ export function decodeDepthStencilStates(dssChunk: Uint8Array): Bundle.IDepthSte
                 StencilPassOp: BackFaceStencilPassOp,
                 StencilFunc: BackFaceStencilFunc
             },
-         });
+        });
     }
     return states;
+}
+
+
+
+export function decodeRenderTargetViews(rtvsChunk: Uint8Array): Bundle.IRenderTargetView[] {
+    if (!rtvsChunk) {
+        return [];
+    }
+
+    let readed = 0;
+    let rtvCount = u8ArrayToI32(rtvsChunk.subarray(readed, readed + 4));
+    readed += 4;
+
+    let rtvs: Bundle.IRenderTargetView[] = [];
+    for (let i = 0; i < rtvCount; ++i) {
+        const nameLength = u8ArrayToI32(rtvsChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const name = String.fromCharCode(...rtvsChunk.subarray(readed, readed + nameLength));
+        readed += nameLength;
+        const textureLength = u8ArrayToI32(rtvsChunk.subarray(readed, readed + 4));
+        readed += 4;
+        const texture = String.fromCharCode(...rtvsChunk.subarray(readed, readed + textureLength));
+        readed += textureLength;
+        const format = <ERenderTargetFormats>u8ArrayToI32(rtvsChunk.subarray(readed, readed + 4));
+
+        rtvs.push({ name, texture, format });
+    }
+    return rtvs;
 }
 
 
@@ -805,7 +844,7 @@ function decodeTypeLayout(data: Uint8Array, layout: TypeLayoutT): number {
     let count = u8ArrayToI32(data.subarray(readed, readed + 4));
     readed += 4;
 
-    for (let i = 0; i < count; ++ i) {
+    for (let i = 0; i < count; ++i) {
         let fiedl: TypeFieldT = {} as any;
         readed += decodeTypeField(data.subarray(readed), fiedl);
         layout.fields ||= [];

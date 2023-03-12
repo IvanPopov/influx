@@ -50,42 +50,46 @@ public struct VertexShader : IFlatbufferObject
   public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
   public VertexShader __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
-  public string Code { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public uint Crc32 { get { int o = __p.__offset(4); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
+  public string Code { get { int o = __p.__offset(6); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetCodeBytes() { return __p.__vector_as_span<byte>(4, 1); }
+  public Span<byte> GetCodeBytes() { return __p.__vector_as_span<byte>(6, 1); }
 #else
-  public ArraySegment<byte>? GetCodeBytes() { return __p.__vector_as_arraysegment(4); }
+  public ArraySegment<byte>? GetCodeBytes() { return __p.__vector_as_arraysegment(6); }
 #endif
-  public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(4); }
-  public string EntryName { get { int o = __p.__offset(6); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(6); }
+  public string EntryName { get { int o = __p.__offset(8); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetEntryNameBytes() { return __p.__vector_as_span<byte>(6, 1); }
+  public Span<byte> GetEntryNameBytes() { return __p.__vector_as_span<byte>(8, 1); }
 #else
-  public ArraySegment<byte>? GetEntryNameBytes() { return __p.__vector_as_arraysegment(6); }
+  public ArraySegment<byte>? GetEntryNameBytes() { return __p.__vector_as_arraysegment(8); }
 #endif
-  public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(6); }
-  public TypeLayout? Input { get { int o = __p.__offset(8); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
-  public CBBundle? Cbuffers(int j) { int o = __p.__offset(10); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
-  public int CbuffersLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
+  public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(8); }
+  public TypeLayout? Input { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
+  public CBBundle? Cbuffers(int j) { int o = __p.__offset(12); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public int CbuffersLength { get { int o = __p.__offset(12); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.VertexShader> CreateVertexShader(FlatBufferBuilder builder,
+      uint crc32 = 0,
       StringOffset codeOffset = default(StringOffset),
       StringOffset entryNameOffset = default(StringOffset),
       Offset<TypeLayout> inputOffset = default(Offset<TypeLayout>),
       VectorOffset cbuffersOffset = default(VectorOffset)) {
-    builder.StartTable(4);
+    builder.StartTable(5);
     VertexShader.AddCbuffers(builder, cbuffersOffset);
     VertexShader.AddInput(builder, inputOffset);
     VertexShader.AddEntryName(builder, entryNameOffset);
     VertexShader.AddCode(builder, codeOffset);
+    VertexShader.AddCrc32(builder, crc32);
     return VertexShader.EndVertexShader(builder);
   }
 
-  public static void StartVertexShader(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(0, codeOffset.Value, 0); }
-  public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(1, entryNameOffset.Value, 0); }
-  public static void AddInput(FlatBufferBuilder builder, Offset<TypeLayout> inputOffset) { builder.AddOffset(2, inputOffset.Value, 0); }
-  public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(3, cbuffersOffset.Value, 0); }
+  public static void StartVertexShader(FlatBufferBuilder builder) { builder.StartTable(5); }
+  public static void AddCrc32(FlatBufferBuilder builder, uint crc32) { builder.AddUint(0, crc32, 0); }
+  public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(1, codeOffset.Value, 0); }
+  public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(2, entryNameOffset.Value, 0); }
+  public static void AddInput(FlatBufferBuilder builder, Offset<TypeLayout> inputOffset) { builder.AddOffset(3, inputOffset.Value, 0); }
+  public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(4, cbuffersOffset.Value, 0); }
   public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
@@ -101,6 +105,7 @@ public struct VertexShader : IFlatbufferObject
     return _o;
   }
   public void UnPackTo(VertexShaderT _o) {
+    _o.Crc32 = this.Crc32;
     _o.Code = this.Code;
     _o.EntryName = this.EntryName;
     _o.Input = this.Input.HasValue ? this.Input.Value.UnPack() : null;
@@ -120,6 +125,7 @@ public struct VertexShader : IFlatbufferObject
     }
     return CreateVertexShader(
       builder,
+      _o.Crc32,
       _code,
       _entryName,
       _input,
@@ -129,12 +135,14 @@ public struct VertexShader : IFlatbufferObject
 
 public class VertexShaderT
 {
+  public uint Crc32 { get; set; }
   public string Code { get; set; }
   public string EntryName { get; set; }
   public TypeLayoutT Input { get; set; }
   public List<CBBundleT> Cbuffers { get; set; }
 
   public VertexShaderT() {
+    this.Crc32 = 0;
     this.Code = null;
     this.EntryName = null;
     this.Input = null;
@@ -152,38 +160,42 @@ public struct PixelShader : IFlatbufferObject
   public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
   public PixelShader __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
-  public string Code { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public uint Crc32 { get { int o = __p.__offset(4); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
+  public string Code { get { int o = __p.__offset(6); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetCodeBytes() { return __p.__vector_as_span<byte>(4, 1); }
+  public Span<byte> GetCodeBytes() { return __p.__vector_as_span<byte>(6, 1); }
 #else
-  public ArraySegment<byte>? GetCodeBytes() { return __p.__vector_as_arraysegment(4); }
+  public ArraySegment<byte>? GetCodeBytes() { return __p.__vector_as_arraysegment(6); }
 #endif
-  public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(4); }
-  public string EntryName { get { int o = __p.__offset(6); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
+  public byte[] GetCodeArray() { return __p.__vector_as_array<byte>(6); }
+  public string EntryName { get { int o = __p.__offset(8); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
 #if ENABLE_SPAN_T
-  public Span<byte> GetEntryNameBytes() { return __p.__vector_as_span<byte>(6, 1); }
+  public Span<byte> GetEntryNameBytes() { return __p.__vector_as_span<byte>(8, 1); }
 #else
-  public ArraySegment<byte>? GetEntryNameBytes() { return __p.__vector_as_arraysegment(6); }
+  public ArraySegment<byte>? GetEntryNameBytes() { return __p.__vector_as_arraysegment(8); }
 #endif
-  public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(6); }
-  public CBBundle? Cbuffers(int j) { int o = __p.__offset(8); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
-  public int CbuffersLength { get { int o = __p.__offset(8); return o != 0 ? __p.__vector_len(o) : 0; } }
+  public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(8); }
+  public CBBundle? Cbuffers(int j) { int o = __p.__offset(10); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public int CbuffersLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.PixelShader> CreatePixelShader(FlatBufferBuilder builder,
+      uint crc32 = 0,
       StringOffset codeOffset = default(StringOffset),
       StringOffset entryNameOffset = default(StringOffset),
       VectorOffset cbuffersOffset = default(VectorOffset)) {
-    builder.StartTable(3);
+    builder.StartTable(4);
     PixelShader.AddCbuffers(builder, cbuffersOffset);
     PixelShader.AddEntryName(builder, entryNameOffset);
     PixelShader.AddCode(builder, codeOffset);
+    PixelShader.AddCrc32(builder, crc32);
     return PixelShader.EndPixelShader(builder);
   }
 
-  public static void StartPixelShader(FlatBufferBuilder builder) { builder.StartTable(3); }
-  public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(0, codeOffset.Value, 0); }
-  public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(1, entryNameOffset.Value, 0); }
-  public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(2, cbuffersOffset.Value, 0); }
+  public static void StartPixelShader(FlatBufferBuilder builder) { builder.StartTable(4); }
+  public static void AddCrc32(FlatBufferBuilder builder, uint crc32) { builder.AddUint(0, crc32, 0); }
+  public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(1, codeOffset.Value, 0); }
+  public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(2, entryNameOffset.Value, 0); }
+  public static void AddCbuffers(FlatBufferBuilder builder, VectorOffset cbuffersOffset) { builder.AddOffset(3, cbuffersOffset.Value, 0); }
   public static VectorOffset CreateCbuffersVector(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, Offset<CBBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
@@ -199,6 +211,7 @@ public struct PixelShader : IFlatbufferObject
     return _o;
   }
   public void UnPackTo(PixelShaderT _o) {
+    _o.Crc32 = this.Crc32;
     _o.Code = this.Code;
     _o.EntryName = this.EntryName;
     _o.Cbuffers = new List<CBBundleT>();
@@ -216,6 +229,7 @@ public struct PixelShader : IFlatbufferObject
     }
     return CreatePixelShader(
       builder,
+      _o.Crc32,
       _code,
       _entryName,
       _cbuffers);
@@ -224,11 +238,13 @@ public struct PixelShader : IFlatbufferObject
 
 public class PixelShaderT
 {
+  public uint Crc32 { get; set; }
   public string Code { get; set; }
   public string EntryName { get; set; }
   public List<CBBundleT> Cbuffers { get; set; }
 
   public PixelShaderT() {
+    this.Crc32 = 0;
     this.Code = null;
     this.EntryName = null;
     this.Cbuffers = null;

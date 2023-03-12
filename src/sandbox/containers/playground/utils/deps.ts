@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { TGALoader } from 'three/examples/jsm/loaders/TGALoader';
 
-export interface IDeps {
+export interface IResourceDependencies {
     models: IMap<THREE.Mesh[]>;
     textures: IMap<THREE.Texture>;
 }
@@ -127,8 +127,8 @@ function loadTexture(name: string): Promise<THREE.Texture> {
 function resolveExternalDependencies(
     preloadTextures: boolean,
     preloadMeshes: boolean,
-    deps: IDeps,
-    onComplete?: (deps: IDeps) => void) {
+    deps: IResourceDependencies,
+    onComplete?: (deps: IResourceDependencies) => void) {
 
     const geoms: Set<string> = new Set();
     const textures: Set<string> = new Set();
@@ -177,11 +177,11 @@ function resolveExternalDependencies(
 }
 
 
-export class Deps implements IDeps {
+export class ResourceDependencies implements IResourceDependencies {
     models = {};
     textures = {};
 
-    resolve(preloadTextures: boolean, preloadMeshes: boolean, onComplete?: (deps: IDeps) => void) {
+    resolve(preloadTextures: boolean, preloadMeshes: boolean, onComplete?: (deps: IResourceDependencies) => void) {
         resolveExternalDependencies(preloadTextures, preloadMeshes, this, onComplete);
     }
 }

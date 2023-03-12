@@ -8,7 +8,7 @@ import { IPlaygroundControlsState } from '@sandbox/store/IStoreState';
 import * as THREE from 'three';
 import HDRScene from './HDRScene';
 import { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
-import { Deps } from './utils/deps';
+import { ResourceDependencies } from './utils/deps';
 import { GroupedUniforms } from './utils/GroupedUniforms';
 import { GuiView } from './utils/gui';
 import { SingleUniforms } from './utils/SingleUniforms';
@@ -32,7 +32,7 @@ class Technique9Scene extends HDRScene<IProps, IState> {
     protected gui = new GuiView;
     protected uniformGroups: GroupedUniforms = new GroupedUniforms;
     protected uniforms: IMap<THREE.IUniform>;
-    protected deps = new Deps;
+    protected deps = new ResourceDependencies;
 
     constructor(props) {
         super(props);

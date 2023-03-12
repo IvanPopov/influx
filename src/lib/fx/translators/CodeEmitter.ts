@@ -558,15 +558,26 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
 
     // todo: add compute entry support
-    protected emitEntryFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
-        const { def } = fn;
+    protected emitEntryFunction(ctx: ContextT, decl: IFunctionDeclInstruction) {
+        if (!decl) {
+            return;
+        }
+
+        const { def } = decl;
+
+        const sign = fn.signature(def);
+        if (ctx.has(sign)) {
+            return;
+        }
+        ctx.add(sign);
+        
         const { typeName } = this.resolveType(ctx, def.returnType);
 
         this.begin();
         {
             // in case of hlsl materials it's typical to swap arbitrary name for bundle name
             // to simplify further compilation
-            let fnName = this.evaluateEntryName(ctx, fn);
+            let fnName = this.evaluateEntryName(ctx, decl);
             this.emitKeyword(typeName);
             this.emitKeyword(fnName);
             this.emitChar('(');
@@ -579,11 +590,11 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
             if (!def.returnType.isComplex()) {
                 if (ctx.isPixel()) {
                     this.emitChar(':');
-                    this.emitKeyword(fn.semantic || 'SV_Target0');
+                    this.emitKeyword(decl.semantic || 'SV_Target0');
                 }
             }
             this.emitNewline();
-            this.emitBlock(ctx, fn.impl);
+            this.emitBlock(ctx, decl.impl);
         }
         this.end();
     }
@@ -608,26 +619,33 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
     }
     
 
-    protected emitRegularFunction(ctx: ContextT, fn: IFunctionDeclInstruction) {
-        if (!fn) {
+    protected emitRegularFunction(ctx: ContextT, decl: IFunctionDeclInstruction) {
+        if (!decl) {
             return;
         }
 
-        const { def } = fn;
+        const { def } = decl;
+
+        const sign = fn.signature(def);
+        if (ctx.has(sign)) {
+            return;
+        }
+        ctx.add(sign);
+
         const { typeName } = this.resolveType(ctx, def.returnType);
 
         this.begin();
         {
-            this.emitAttributes(ctx, fn.attrs);
+            this.emitAttributes(ctx, decl.attrs);
             this.emitKeyword(typeName);
-            this.emitKeyword(fn.name);
+            this.emitKeyword(decl.name);
             this.emitChar('(');
             this.emitNoSpace();
             this.emitParams(ctx, def.params);
             this.emitChar(')');
             this.emitNewline();
-            if (fn.impl)
-                this.emitBlock(ctx, fn.impl);
+            if (decl.impl)
+                this.emitBlock(ctx, decl.impl);
             else 
                 this.emitChar(';');
         }
@@ -636,17 +654,6 @@ export class CodeEmitter<ContextT extends CodeContext> extends BaseEmitter {
 
 
     emitFunction(ctx: ContextT, decl: IFunctionDeclInstruction) {
-        if (!decl) {
-            return;
-        }
-
-        const sign = fn.signature(decl.def);
-        if (ctx.has(sign)) {
-            return;
-        }
-
-        ctx.add(sign);
-
         const isEntry = (this.depth() == 0) && !ctx.isRaw();
         if (isEntry) this.emitEntryFunction(ctx, decl);
         else this.emitRegularFunction(ctx, decl);

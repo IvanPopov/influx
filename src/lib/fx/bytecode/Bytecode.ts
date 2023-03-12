@@ -262,16 +262,16 @@ function shadersChunk(ctx: IContext): ArrayBuffer {
 // depth stencil state
 function dssChunk(ctx: IContext): ArrayBuffer {
     const { pipeline } = ctx;
-    const depthStencilStates = pipeline.dumpDepthStencilStates();
+    const dss = pipeline.dumpDepthStencilStates();
 
-    if (depthStencilStates.length === 0) {
+    if (dss.length === 0) {
         return CHUNK_EMPTY;
     }
 
 
     const byteLength =
     4/* depthStencilStates.length */ +
-    depthStencilStates.map(dss =>
+    dss.map(dss =>
         4 + // DepthEnable
         4 + // DepthWriteMask
         4 + // DepthFunc
@@ -288,29 +288,69 @@ function dssChunk(ctx: IContext): ArrayBuffer {
     data.set(chunkHeader);
 
     const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
-    let written = writeInt(u8data, 0, depthStencilStates.length);
-    for (let i = 0; i < depthStencilStates.length; ++i) {
-        const dss = depthStencilStates[i];
-        written = writeInt(u8data, written, +dss.DepthEnable);
-        written = writeInt(u8data, written, +dss.DepthWriteMask);
-        written = writeInt(u8data, written, +dss.DepthFunc);
-        written = writeInt(u8data, written, +dss.StencilEnable);
-        written = writeInt(u8data, written, +dss.StencilReadMask);
-        written = writeInt(u8data, written, +dss.StencilWriteMask);
+    let written = writeInt(u8data, 0, dss.length);
+    for (let i = 0; i < dss.length; ++i) {
+        const ds = dss[i];
+        written = writeInt(u8data, written, +ds.DepthEnable);
+        written = writeInt(u8data, written, +ds.DepthWriteMask);
+        written = writeInt(u8data, written, +ds.DepthFunc);
+        written = writeInt(u8data, written, +ds.StencilEnable);
+        written = writeInt(u8data, written, +ds.StencilReadMask);
+        written = writeInt(u8data, written, +ds.StencilWriteMask);
 
-        written = writeInt(u8data, written, +dss.FrontFace.StencilFailOp);
-        written = writeInt(u8data, written, +dss.FrontFace.StencilDepthFailOp);
-        written = writeInt(u8data, written, +dss.FrontFace.StencilPassOp);
-        written = writeInt(u8data, written, +dss.FrontFace.StencilFunc);
+        written = writeInt(u8data, written, +ds.FrontFace.StencilFailOp);
+        written = writeInt(u8data, written, +ds.FrontFace.StencilDepthFailOp);
+        written = writeInt(u8data, written, +ds.FrontFace.StencilPassOp);
+        written = writeInt(u8data, written, +ds.FrontFace.StencilFunc);
 
-        written = writeInt(u8data, written, +dss.BackFace.StencilFailOp);
-        written = writeInt(u8data, written, +dss.BackFace.StencilDepthFailOp);
-        written = writeInt(u8data, written, +dss.BackFace.StencilPassOp);
-        written = writeInt(u8data, written, +dss.BackFace.StencilFunc);
+        written = writeInt(u8data, written, +ds.BackFace.StencilFailOp);
+        written = writeInt(u8data, written, +ds.BackFace.StencilDepthFailOp);
+        written = writeInt(u8data, written, +ds.BackFace.StencilPassOp);
+        written = writeInt(u8data, written, +ds.BackFace.StencilFunc);
     }
 
     return data.buffer;
 }
+
+
+// render target view
+function rtvsChunk(ctx: IContext): ArrayBuffer {
+    const { pipeline } = ctx;
+    const rtvs = pipeline.dumpRenderTargetViews();
+
+    if (rtvs.length === 0) {
+        return CHUNK_EMPTY;
+    }
+
+
+    const byteLength =
+    4/* rtvs.length */ +
+    rtvs.map(dss =>
+        dss.name.length + 4 /* sizeof(name) */ +
+        dss.texture.length + 4 /* sizeof(texture) */ +
+        4 /* sizeof(format) */
+    ).reduce((prev, curr) => prev + curr, 0);
+
+    const size = (byteLength + 4) >> 2;
+    const chunkHeader = [EChunkType.k_RenderTargetViews, size];
+    const data = new Uint32Array(chunkHeader.length + size);
+    data.set(chunkHeader);
+
+    const u8data = new Uint8Array(data.buffer, 8/* int header type + int size */);
+    let written = writeInt(u8data, 0, rtvs.length);
+    for (let i = 0; i < rtvs.length; ++i) {
+        const rtv = rtvs[i];
+        written = writeString(u8data, written, rtv.name);
+        written = writeString(u8data, written, rtv.texture);
+        written = writeInt(u8data, written, rtv.format);
+    }
+
+    return data.buffer;
+}
+
+
+
+
 
 function binary(ctx: IContext): Uint8Array {
     const chunks = [
@@ -319,7 +359,8 @@ function binary(ctx: IContext): Uint8Array {
         codeChunk(ctx), 
         externsChunk(ctx),
         shadersChunk(ctx),
-        dssChunk(ctx)
+        dssChunk(ctx),
+        rtvsChunk(ctx)
     ].map(ch => new Uint8Array(ch));
     const byteLength = chunks.map(x => x.byteLength).reduce((a, b) => a + b);
     let data = new Uint8Array(byteLength);
@@ -1185,6 +1226,9 @@ function translateUnknown(ctx: IContext, instr: IInstruction): void {
                                 //  DepthStencilState
                                 //  RasterizerState
                                 //  BlendState
+                                // 
+                                //  RenderTargetView
+                                //  DepthStencilView
                                 const id = pipeline.deref(decl);
                                 return iconst_i32(id);
                             }

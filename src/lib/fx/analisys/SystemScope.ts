@@ -11,9 +11,9 @@ import {
 } from "./system/utils";
 import { addSystemTypeVector } from "./system/vector";
 export {
-    isBase, isBlendState, isBoolBasedType, isBuffer, isDepthStencilState, isFloatBasedType, isFloatType, isHalfBasedType,
-    isIntBasedType, isIntegerType, isMatrixType, isPipelineState, isRasterizerState, isSamplerState, isScalarType,
-    isTexture, isUAV, isUintBasedType, isVectorType, resolveRegister
+    isBase, isBlendState, isBoolBasedType, isBuffer, isDepthStencilState, isDepthStencilView, isFloatBasedType,
+    isFloatType, isHalfBasedType, isIntBasedType, isIntegerType, isMatrixType, isPipelineState, isRasterizerState,
+    isRenderTargetView, isSamplerState, isScalarType, isTexture, isUAV, isUintBasedType, isVectorType, resolveRegister
 } from './system/utils';
 
 const scope = new Scope({ type: EScopeType.k_System });
@@ -46,6 +46,9 @@ export const T_NULL = scope.findType("null_t");
 export const T_SAMPLER_STATE = scope.findType("SamplerState");
 export const T_BLEND_STATE = scope.findType("BlendState");
 export const T_DEPTH_STENCIL_STATE = scope.findType("DepthStencilState");
+
+export const T_RENDER_TARGET_VIEW = scope.findType("RenderTargetView");
+export const T_DEPTH_STENCIL_VIEW = scope.findType("DepthStencilView");
 
 export const T_FLOAT = scope.findType("float");
 export const T_FLOAT2 = scope.findType("float2");

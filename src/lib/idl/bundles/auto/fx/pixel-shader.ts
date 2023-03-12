@@ -23,44 +23,53 @@ static getSizePrefixedRootAsPixelShader(bb:flatbuffers.ByteBuffer, obj?:PixelSha
   return (obj || new PixelShader()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
+crc32():number {
+  const offset = this.bb!.__offset(this.bb_pos, 4);
+  return offset ? this.bb!.readUint32(this.bb_pos + offset) : 0;
+}
+
 code():string|null
 code(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
 code(optionalEncoding?:any):string|Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 4);
+  const offset = this.bb!.__offset(this.bb_pos, 6);
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
 entryName():string|null
 entryName(optionalEncoding:flatbuffers.Encoding):string|Uint8Array|null
 entryName(optionalEncoding?:any):string|Uint8Array|null {
-  const offset = this.bb!.__offset(this.bb_pos, 6);
+  const offset = this.bb!.__offset(this.bb_pos, 8);
   return offset ? this.bb!.__string(this.bb_pos + offset, optionalEncoding) : null;
 }
 
 cbuffers(index: number, obj?:CBBundle):CBBundle|null {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? (obj || new CBBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
 }
 
 cbuffersLength():number {
-  const offset = this.bb!.__offset(this.bb_pos, 8);
+  const offset = this.bb!.__offset(this.bb_pos, 10);
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
 static startPixelShader(builder:flatbuffers.Builder) {
-  builder.startObject(3);
+  builder.startObject(4);
+}
+
+static addCrc32(builder:flatbuffers.Builder, crc32:number) {
+  builder.addFieldInt32(0, crc32, 0);
 }
 
 static addCode(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(0, codeOffset, 0);
+  builder.addFieldOffset(1, codeOffset, 0);
 }
 
 static addEntryName(builder:flatbuffers.Builder, entryNameOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(1, entryNameOffset, 0);
+  builder.addFieldOffset(2, entryNameOffset, 0);
 }
 
 static addCbuffers(builder:flatbuffers.Builder, cbuffersOffset:flatbuffers.Offset) {
-  builder.addFieldOffset(2, cbuffersOffset, 0);
+  builder.addFieldOffset(3, cbuffersOffset, 0);
 }
 
 static createCbuffersVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
@@ -80,8 +89,9 @@ static endPixelShader(builder:flatbuffers.Builder):flatbuffers.Offset {
   return offset;
 }
 
-static createPixelShader(builder:flatbuffers.Builder, codeOffset:flatbuffers.Offset, entryNameOffset:flatbuffers.Offset, cbuffersOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createPixelShader(builder:flatbuffers.Builder, crc32:number, codeOffset:flatbuffers.Offset, entryNameOffset:flatbuffers.Offset, cbuffersOffset:flatbuffers.Offset):flatbuffers.Offset {
   PixelShader.startPixelShader(builder);
+  PixelShader.addCrc32(builder, crc32);
   PixelShader.addCode(builder, codeOffset);
   PixelShader.addEntryName(builder, entryNameOffset);
   PixelShader.addCbuffers(builder, cbuffersOffset);
@@ -90,6 +100,7 @@ static createPixelShader(builder:flatbuffers.Builder, codeOffset:flatbuffers.Off
 
 unpack(): PixelShaderT {
   return new PixelShaderT(
+    this.crc32(),
     this.code(),
     this.entryName(),
     this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength())
@@ -98,6 +109,7 @@ unpack(): PixelShaderT {
 
 
 unpackTo(_o: PixelShaderT): void {
+  _o.crc32 = this.crc32();
   _o.code = this.code();
   _o.entryName = this.entryName();
   _o.cbuffers = this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength());
@@ -106,6 +118,7 @@ unpackTo(_o: PixelShaderT): void {
 
 export class PixelShaderT {
 constructor(
+  public crc32: number = 0,
   public code: string|Uint8Array|null = null,
   public entryName: string|Uint8Array|null = null,
   public cbuffers: (CBBundleT)[] = []
@@ -118,6 +131,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const cbuffers = PixelShader.createCbuffersVector(builder, builder.createObjectOffsetList(this.cbuffers));
 
   return PixelShader.createPixelShader(builder,
+    this.crc32,
     code,
     entryName,
     cbuffers

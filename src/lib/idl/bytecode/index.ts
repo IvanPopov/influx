@@ -1,8 +1,11 @@
 
 export { EOperation } from "./EOperations";
 export { EComparisonFunc, EDepthWriteMask, EStencilOp, IDepthStencilState } from "./IDepthStencilState";
+export { IRenderTargetView } from "./IRenderTargetView";
+export { IDepthStencilView } from "./IDepthStencilView";
 
 import { TypeLayoutT } from "../bundles/auto/type-layout";
+import { IRenderTargetView } from "./IRenderTargetView";
 
 export enum EAddrType {
     k_Registers,
@@ -20,7 +23,8 @@ export enum EChunkType {
     k_Code,
     k_Externs,
     k_Shaders,
-    k_DepthStencilStates
+    k_DepthStencilStates,
+    k_RenderTargetViews
 };
 
 export interface IConstant
@@ -102,4 +106,5 @@ export interface IBundle
 
     getLayout(): IConstant[];
     getExterns(): IExtern[];
+    getRenderTargets(): IRenderTargetView[];
 }

@@ -1,7 +1,7 @@
 import { ControlValueType } from "@lib/fx/bundles/utils";
 import { Vector4, Vector3, Vector2, Color } from "@sandbox/store/IStoreState";
 import * as THREE from 'three';
-import { IDeps } from "./deps";
+import { IResourceDependencies } from "./deps";
 
 function createPlaceholderTexture(width = 512, height = 512) {
     const size = width * height;
@@ -29,7 +29,7 @@ function createPlaceholderTexture(width = 512, height = 512) {
 
 export const TEXTURE_PLACEHOLDER_WHITE_1X1 = createPlaceholderTexture(1, 1);
 
-export function controlValueToThreeValue(ctrl: ControlValueType, type: string, deps: IDeps): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
+export function controlValueToThreeValue(ctrl: ControlValueType, type: string, deps: IResourceDependencies): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
     let ab = new ArrayBuffer(4);
     let dv = new DataView(ab);
     switch (type) {

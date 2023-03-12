@@ -3,7 +3,8 @@ import { expression } from "@lib/fx/analisys/helpers";
 import * as SystemScope from "@lib/fx/analisys/SystemScope";
 import { IShader } from "@lib/idl/bytecode";
 import { EComparisonFunc, EDepthWriteMask, EStencilOp, IDepthStencilState } from "@lib/idl/bytecode";
-import { EInstructionTypes, ICompileShader11Instruction, IStateBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
+import { ERenderTargetFormats, IRenderTargetView } from "@lib/idl/bytecode/IRenderTargetView";
+import { EInstructionTypes, ICompileShader11Instruction, ILiteralInstruction, IStateBlockInstruction, IVariableDeclInstruction } from "@lib/idl/IInstruction";
 import { IMap } from "@lib/idl/IMap";
 
 function hash(csh: ICompileShader11Instruction): string {
@@ -86,6 +87,11 @@ interface IDepthStencilStateEntry {
     state: IDepthStencilState;
 }
 
+interface IRenderTargetViewEntry {
+    name: string;
+    view: IRenderTargetView;
+}
+
 interface IShaderEntry {
     id: number;
     shader: IShader;
@@ -94,6 +100,7 @@ interface IShaderEntry {
 export class PipelineStates {
     protected _knownShaders: IMap<IShaderEntry> = {};
     protected _knownDepthStencilStates: IDepthStencilStateEntry[] = [];
+    protected _knownRenderTargetViews: IRenderTargetViewEntry[] = [];
 
 
     dumpShaders(): IShaderEntry[] {
@@ -103,6 +110,11 @@ export class PipelineStates {
 
     dumpDepthStencilStates(): IDepthStencilState[] {
         return this._knownDepthStencilStates.map(entry => entry.state);
+    }
+
+
+    dumpRenderTargetViews(): IRenderTargetView[] {
+        return this._knownRenderTargetViews.map(entry => entry.view);
     }
 
 
@@ -137,6 +149,15 @@ export class PipelineStates {
         if (SystemScope.isRasterizerState(decl.type)) {
             console.assert(false, 'raserizer state is not yet supported');
             return this.derefRasterizerState(decl);
+        }
+
+        if (SystemScope.isRenderTargetView(decl.type)) {
+            return this.derefRenderTargetView(decl);
+        }
+
+        if (SystemScope.isDepthStencilView(decl.type)) {
+            console.assert(false, 'DSV is not yet supported');
+            return this.derefDepthStencilView(decl);
         }
         
         assert(false, `unknown pipeline state "${decl.type.name}" found`);
@@ -193,6 +214,50 @@ export class PipelineStates {
 
     
     protected derefRasterizerState(decl: IVariableDeclInstruction): number {
+        return 0;
+    }
+
+
+    protected derefRenderTargetView(decl: IVariableDeclInstruction): number {
+        const { name, type, initExpr, annotation } = decl;
+        const entries = this._knownRenderTargetViews;
+        let id = entries.findIndex(s => s.name === name);
+
+        if (id == -1) {
+            id = entries.length;
+            let texture = null;
+            let format = ERenderTargetFormats.k_rgba8;
+
+            annotation.decls.forEach(decl => {
+                switch (decl.name) {
+                    case 'format': {
+                            const value = ((decl.initExpr as ILiteralInstruction<string>)?.value || 'rgba8').toLowerCase();
+                            if (value === 'rgba8') format = ERenderTargetFormats.k_rgba8;
+                            if (value === 'rgba32') format = ERenderTargetFormats.k_rgba32;
+                        }
+                        break;
+                    case 'texture': {
+                            const value = ((decl.initExpr as ILiteralInstruction<string>)?.value.slice(1, -1) || '');
+                            assert(value, 'RTV texture must be explicitly defined!');
+                            if (value) {
+                                const texDecl = decl.scope.findVariable(value);
+                                assert(texDecl && SystemScope.isTexture(texDecl.type));
+                                texture = value;
+                            }
+                        }
+                        break;
+                }
+            });
+
+            const view = { name, texture, format };
+            entries.push({ name, view });
+        }
+
+        return id + 1; // '0' is reserved id for NULL shaders
+    }
+
+
+    protected derefDepthStencilView(decl: IVariableDeclInstruction): number {
         return 0;
     }
 }

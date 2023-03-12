@@ -2,11 +2,11 @@ import { ITimeline } from "@lib/fx/timeline";
 import { IConstanBufferField, IConstantBuffer, ITechnique9 } from "@lib/idl/ITechnique9";
 import { IPlaygroundControlsState } from "@sandbox/store/IStoreState";
 import * as THREE from 'three';
-import { IDeps } from "./deps";
+import { IResourceDependencies } from "./deps";
 import { controlValueToThreeValue, typedNumberToF32Num } from "./controls";
 import { AUTOGEN_CONTROLS, AUTOGEN_GLOBALS } from "@lib/fx/translators/FxTranslator";
 
-interface IViewport {
+export interface IViewport {
     clientWidth: number;
     clientHeight: number;
 }
@@ -52,7 +52,7 @@ function copyControl(
     state: IPlaygroundControlsState,
     field: IConstanBufferField,
     i: number,
-    deps: IDeps,
+    deps: IResourceDependencies,
     group: THREE.UniformsGroup) {
     const name = `${field.name}${i >= 0 ? `[${i}]` : ``}`;
     let offset = 0;
@@ -131,7 +131,7 @@ export class GroupedUniforms {
         viewport: IViewport,
         controls: IPlaygroundControlsState,
         timeline: ITimeline,
-        deps: IDeps,
+        deps: IResourceDependencies,
         tech9: ITechnique9
     ): void {
         for (let iPass = 0; iPass < tech9.getPassCount(); ++iPass) {
@@ -147,7 +147,7 @@ export class GroupedUniforms {
         viewport: IViewport,
         controls: IPlaygroundControlsState,
         timeline: ITimeline,
-        deps: IDeps,
+        deps: IResourceDependencies,
         groups: THREE.UniformsGroup[],
         cbuffers: IConstantBuffer[]
     ) {

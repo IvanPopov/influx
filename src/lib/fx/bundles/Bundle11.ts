@@ -11,9 +11,10 @@ import { FxTranslator, FxTranslatorContext, IFxContextExOptions, IUIControl } fr
 import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
 import { EChunkType } from "@lib/idl/bytecode";
 import { ITechnique11Instruction } from "@lib/idl/IInstruction";
+import { crc32 } from "@lib/util/crc32";
 import { Diagnostics } from "@lib/util/Diagnostics";
 import { isDef } from "@lib/util/s3d/type";
-import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, controlValueFromString, propertyValueFromString } from "./utils";
+import { controlValueFromString, ConvolutionPackEx, encodeControlValue, encodePropertyValue, propertyValueFromString } from "./utils";
 
 import * as flatbuffers from "flatbuffers";
 
@@ -30,6 +31,7 @@ import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11rend
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
 import { VertexShaderT } from "@lib/idl/bundles/auto/fx/vertex-shader";
 import { ViewTypePropertyT } from "@lib/idl/bundles/auto/fx/view-type-property";
+
 
 /** Create flatbuffers controls from native translator description. */
 function createFxControls(controls: IUIControl[]): UIControlT[] {
@@ -170,11 +172,11 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
                     case 'vs': 
                     let input = typeAstToTypeLayout(entryFn.def.params[0].type);
                     shaderType = Shader.VertexShader;
-                    shader = new VertexShaderT(sourceCode, name, input, cbuffers);
+                    shader = new VertexShaderT(crc32(sourceCode), sourceCode, name, input, cbuffers);
                     break;
                     case 'ps':
                     shaderType = Shader.PixelShader;
-                    shader = new PixelShaderT(sourceCode, name, cbuffers);
+                    shader = new PixelShaderT(crc32(sourceCode), sourceCode, name, cbuffers);
                     break;
                     default:
                         assert(false, 'not implemeted');

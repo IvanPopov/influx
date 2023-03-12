@@ -8,7 +8,7 @@ import { toast } from 'react-semantic-toasts';
 import copy from 'copy-to-clipboard';
 
 export class GuiView {
-    protected gui: GUI = null;
+    gui: GUI = null;
     protected mountEl: HTMLDivElement;
     protected hash: string;
     protected presetName: string = null;

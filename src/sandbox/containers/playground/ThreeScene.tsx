@@ -22,9 +22,9 @@ export interface IThreeSceneState {
 
 
 class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends React.Component<P, S> {
-    private frames = 0;      // fps stats
-    private prevTime = 0;    // fps stats
-    private frameId: number; // animation loop
+    protected frames = 0;      // fps stats
+    protected prevTime = 0;    // fps stats
+    protected frameId: number; // animation loop
 
     protected renderer: THREE.WebGLRenderer;
     protected camera: THREE.PerspectiveCamera;
@@ -56,6 +56,7 @@ class ThreeScene<P extends ITreeSceneProps, S extends IThreeSceneState> extends 
         }
 
         this.scene.fog = this.fog;
+        // this.scene.backgroundBlurriness = 0.3;
 
         this.renderer = this.createRenderer(width, height);
         this.renderer.setSize(width, height);

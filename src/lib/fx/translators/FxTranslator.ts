@@ -1,4 +1,4 @@
-import { assert, isDef, isString } from "@lib/common";
+import { assert, isDef } from "@lib/common";
 import { types } from "@lib/fx/analisys/helpers";
 import { FloatInstruction } from "@lib/fx/analisys/instructions/FloatInstruction";
 import { IntInstruction } from "@lib/fx/analisys/instructions/IntInstruction";
@@ -6,16 +6,20 @@ import { StringInstruction } from "@lib/fx/analisys/instructions/StringInstructi
 import * as SystemScope from '@lib/fx/analisys/SystemScope';
 import { isBoolBasedType, isFloatBasedType, isIntBasedType, isUintBasedType, T_FLOAT, T_FLOAT4, T_INT, T_VOID } from "@lib/fx/analisys/SystemScope";
 import { ControlValueType, PropertyValueType } from "@lib/fx/bundles/utils";
+import { visitor } from '@lib/fx/Visitors';
 import { ERenderStateValues } from "@lib/idl/ERenderStateValues";
-import { EInstructionTypes, ICompileShader11Instruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction, IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechnique11Instruction, ITechniqueInstruction, IVariableDeclInstruction, IVariableTypeInstruction } from "@lib/idl/IInstruction";
+import {
+    EInstructionTypes, ICompileShader11Instruction, IExprInstruction, IFunctionCallInstruction, IFunctionDeclInstruction, IFunctionDefInstruction,
+    IIdExprInstruction, IInitExprInstruction, IInstruction, ILiteralInstruction, ITechnique11Instruction, ITechniqueInstruction,
+    IVariableDeclInstruction, IVariableTypeInstruction
+} from "@lib/idl/IInstruction";
+import { IMap } from "@lib/idl/IMap";
 import { EPassDrawMode, IDrawStmtInstruction, IPartFxInstruction, IPartFxPassInstruction, ISpawnStmtInstruction } from "@lib/idl/part/IPartFx";
 import { Color, Vector2, Vector3, Vector4 } from "@sandbox/store/IStoreState";
+import { EVariableUsageFlags } from "../analisys/instructions/VariableDeclInstruction";
 import { ICodeConvolutionContextOptions } from "./CodeConvolutionEmitter";
 import { ICSShaderReflection, IUniformReflection } from "./CodeEmitter";
 import { FxConvolutionContext, FxEmitter } from "./FxEmitter";
-import { visitor } from '@lib/fx/Visitors';
-import { IMap } from "@lib/idl/IMap";
-import { EVariableUsageFlags } from "../analisys/instructions/VariableDeclInstruction";
 
 export interface IViewTypeProperty {
     name: string;
@@ -696,9 +700,12 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
         if (!ctx.has(name)) {
             let value = (decl.annotation?.decls.find(({ name }) => (name == 'name' || name == 'ResourceName'))
                 ?.initExpr as StringInstruction)?.value;
-            value = value?.slice(1, -1) || null;
-            const control = <IUIControl>{ name, type: 'texture2d', value, properties: [] };
-            ctx.addControl(control);
+            value = value?.slice(1, -1);
+            // textures without didicated name are not considered as user controlled
+            if (value) {
+                const control = <IUIControl>{ name, type: 'texture2d', value, properties: [] };
+                ctx.addControl(control);
+            }
         }
 
         super.emitTexture(ctx, decl);
@@ -1816,7 +1823,7 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
 
     private static fxtTranslator = new FxTranslator({ omitEmptyParams: true });
 
-    static translate(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
+static translate(instr: IInstruction, ctx: FxTranslatorContext = new FxTranslatorContext): string {
         FxTranslator.fxtTranslator.emit(ctx, instr);
         // hack to print gathered buffers
         if (instr.instructionType === EInstructionTypes.k_FunctionDecl) {

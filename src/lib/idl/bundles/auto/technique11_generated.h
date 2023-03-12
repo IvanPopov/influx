@@ -144,6 +144,7 @@ bool VerifyShaderVector(flatbuffers::Verifier &verifier, const flatbuffers::Vect
 
 struct VertexShaderT : public flatbuffers::NativeTable {
   typedef VertexShader TableType;
+  uint32_t crc32 = 0;
   std::string code{};
   std::string entryName{};
   std::unique_ptr<TypeLayoutT> input{};
@@ -158,11 +159,15 @@ struct VertexShader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef VertexShaderT NativeTableType;
   typedef VertexShaderBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_CODE = 4,
-    VT_ENTRYNAME = 6,
-    VT_INPUT = 8,
-    VT_CBUFFERS = 10
+    VT_CRC32 = 4,
+    VT_CODE = 6,
+    VT_ENTRYNAME = 8,
+    VT_INPUT = 10,
+    VT_CBUFFERS = 12
   };
+  uint32_t crc32() const {
+    return GetField<uint32_t>(VT_CRC32, 0);
+  }
   const flatbuffers::String *code() const {
     return GetPointer<const flatbuffers::String *>(VT_CODE);
   }
@@ -177,6 +182,7 @@ struct VertexShader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_CRC32, 4) &&
            VerifyOffset(verifier, VT_CODE) &&
            verifier.VerifyString(code()) &&
            VerifyOffset(verifier, VT_ENTRYNAME) &&
@@ -197,6 +203,9 @@ struct VertexShaderBuilder {
   typedef VertexShader Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
+  void add_crc32(uint32_t crc32) {
+    fbb_.AddElement<uint32_t>(VertexShader::VT_CRC32, crc32, 0);
+  }
   void add_code(flatbuffers::Offset<flatbuffers::String> code) {
     fbb_.AddOffset(VertexShader::VT_CODE, code);
   }
@@ -222,6 +231,7 @@ struct VertexShaderBuilder {
 
 inline flatbuffers::Offset<VertexShader> CreateVertexShader(
     flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t crc32 = 0,
     flatbuffers::Offset<flatbuffers::String> code = 0,
     flatbuffers::Offset<flatbuffers::String> entryName = 0,
     flatbuffers::Offset<TypeLayout> input = 0,
@@ -231,11 +241,13 @@ inline flatbuffers::Offset<VertexShader> CreateVertexShader(
   builder_.add_input(input);
   builder_.add_entryName(entryName);
   builder_.add_code(code);
+  builder_.add_crc32(crc32);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<VertexShader> CreateVertexShaderDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t crc32 = 0,
     const char *code = nullptr,
     const char *entryName = nullptr,
     flatbuffers::Offset<TypeLayout> input = 0,
@@ -245,6 +257,7 @@ inline flatbuffers::Offset<VertexShader> CreateVertexShaderDirect(
   auto cbuffers__ = cbuffers ? _fbb.CreateVector<flatbuffers::Offset<CBBundle>>(*cbuffers) : 0;
   return Fx::CreateVertexShader(
       _fbb,
+      crc32,
       code__,
       entryName__,
       input,
@@ -255,6 +268,7 @@ flatbuffers::Offset<VertexShader> CreateVertexShader(flatbuffers::FlatBufferBuil
 
 struct PixelShaderT : public flatbuffers::NativeTable {
   typedef PixelShader TableType;
+  uint32_t crc32 = 0;
   std::string code{};
   std::string entryName{};
   std::vector<std::unique_ptr<CBBundleT>> cbuffers{};
@@ -268,10 +282,14 @@ struct PixelShader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef PixelShaderT NativeTableType;
   typedef PixelShaderBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_CODE = 4,
-    VT_ENTRYNAME = 6,
-    VT_CBUFFERS = 8
+    VT_CRC32 = 4,
+    VT_CODE = 6,
+    VT_ENTRYNAME = 8,
+    VT_CBUFFERS = 10
   };
+  uint32_t crc32() const {
+    return GetField<uint32_t>(VT_CRC32, 0);
+  }
   const flatbuffers::String *code() const {
     return GetPointer<const flatbuffers::String *>(VT_CODE);
   }
@@ -283,6 +301,7 @@ struct PixelShader FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_CRC32, 4) &&
            VerifyOffset(verifier, VT_CODE) &&
            verifier.VerifyString(code()) &&
            VerifyOffset(verifier, VT_ENTRYNAME) &&
@@ -301,6 +320,9 @@ struct PixelShaderBuilder {
   typedef PixelShader Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
+  void add_crc32(uint32_t crc32) {
+    fbb_.AddElement<uint32_t>(PixelShader::VT_CRC32, crc32, 0);
+  }
   void add_code(flatbuffers::Offset<flatbuffers::String> code) {
     fbb_.AddOffset(PixelShader::VT_CODE, code);
   }
@@ -323,6 +345,7 @@ struct PixelShaderBuilder {
 
 inline flatbuffers::Offset<PixelShader> CreatePixelShader(
     flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t crc32 = 0,
     flatbuffers::Offset<flatbuffers::String> code = 0,
     flatbuffers::Offset<flatbuffers::String> entryName = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<CBBundle>>> cbuffers = 0) {
@@ -330,11 +353,13 @@ inline flatbuffers::Offset<PixelShader> CreatePixelShader(
   builder_.add_cbuffers(cbuffers);
   builder_.add_entryName(entryName);
   builder_.add_code(code);
+  builder_.add_crc32(crc32);
   return builder_.Finish();
 }
 
 inline flatbuffers::Offset<PixelShader> CreatePixelShaderDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t crc32 = 0,
     const char *code = nullptr,
     const char *entryName = nullptr,
     const std::vector<flatbuffers::Offset<CBBundle>> *cbuffers = nullptr) {
@@ -343,6 +368,7 @@ inline flatbuffers::Offset<PixelShader> CreatePixelShaderDirect(
   auto cbuffers__ = cbuffers ? _fbb.CreateVector<flatbuffers::Offset<CBBundle>>(*cbuffers) : 0;
   return Fx::CreatePixelShader(
       _fbb,
+      crc32,
       code__,
       entryName__,
       cbuffers__);
@@ -510,7 +536,8 @@ inline flatbuffers::Offset<Technique11Bundle> CreateTechnique11BundleDirect(
 flatbuffers::Offset<Technique11Bundle> CreateTechnique11Bundle(flatbuffers::FlatBufferBuilder &_fbb, const Technique11BundleT *_o, const flatbuffers::rehasher_function_t *_rehasher = nullptr);
 
 inline VertexShaderT::VertexShaderT(const VertexShaderT &o)
-      : code(o.code),
+      : crc32(o.crc32),
+        code(o.code),
         entryName(o.entryName),
         input((o.input) ? new TypeLayoutT(*o.input) : nullptr) {
   cbuffers.reserve(o.cbuffers.size());
@@ -518,6 +545,7 @@ inline VertexShaderT::VertexShaderT(const VertexShaderT &o)
 }
 
 inline VertexShaderT &VertexShaderT::operator=(VertexShaderT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(crc32, o.crc32);
   std::swap(code, o.code);
   std::swap(entryName, o.entryName);
   std::swap(input, o.input);
@@ -534,6 +562,7 @@ inline VertexShaderT *VertexShader::UnPack(const flatbuffers::resolver_function_
 inline void VertexShader::UnPackTo(VertexShaderT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
+  { auto _e = crc32(); _o->crc32 = _e; }
   { auto _e = code(); if (_e) _o->code = _e->str(); }
   { auto _e = entryName(); if (_e) _o->entryName = _e->str(); }
   { auto _e = input(); if (_e) _o->input = std::unique_ptr<TypeLayoutT>(_e->UnPack(_resolver)); }
@@ -548,12 +577,14 @@ inline flatbuffers::Offset<VertexShader> CreateVertexShader(flatbuffers::FlatBuf
   (void)_rehasher;
   (void)_o;
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const VertexShaderT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _crc32 = _o->crc32;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
   auto _entryName = _o->entryName.empty() ? 0 : _fbb.CreateString(_o->entryName);
   auto _input = _o->input ? CreateTypeLayout(_fbb, _o->input.get(), _rehasher) : 0;
   auto _cbuffers = _o->cbuffers.size() ? _fbb.CreateVector<flatbuffers::Offset<CBBundle>> (_o->cbuffers.size(), [](size_t i, _VectorArgs *__va) { return CreateCBBundle(*__va->__fbb, __va->__o->cbuffers[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreateVertexShader(
       _fbb,
+      _crc32,
       _code,
       _entryName,
       _input,
@@ -561,13 +592,15 @@ inline flatbuffers::Offset<VertexShader> CreateVertexShader(flatbuffers::FlatBuf
 }
 
 inline PixelShaderT::PixelShaderT(const PixelShaderT &o)
-      : code(o.code),
+      : crc32(o.crc32),
+        code(o.code),
         entryName(o.entryName) {
   cbuffers.reserve(o.cbuffers.size());
   for (const auto &cbuffers_ : o.cbuffers) { cbuffers.emplace_back((cbuffers_) ? new CBBundleT(*cbuffers_) : nullptr); }
 }
 
 inline PixelShaderT &PixelShaderT::operator=(PixelShaderT o) FLATBUFFERS_NOEXCEPT {
+  std::swap(crc32, o.crc32);
   std::swap(code, o.code);
   std::swap(entryName, o.entryName);
   std::swap(cbuffers, o.cbuffers);
@@ -583,6 +616,7 @@ inline PixelShaderT *PixelShader::UnPack(const flatbuffers::resolver_function_t 
 inline void PixelShader::UnPackTo(PixelShaderT *_o, const flatbuffers::resolver_function_t *_resolver) const {
   (void)_o;
   (void)_resolver;
+  { auto _e = crc32(); _o->crc32 = _e; }
   { auto _e = code(); if (_e) _o->code = _e->str(); }
   { auto _e = entryName(); if (_e) _o->entryName = _e->str(); }
   { auto _e = cbuffers(); if (_e) { _o->cbuffers.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->cbuffers[_i] = std::unique_ptr<CBBundleT>(_e->Get(_i)->UnPack(_resolver)); } } }
@@ -596,11 +630,13 @@ inline flatbuffers::Offset<PixelShader> CreatePixelShader(flatbuffers::FlatBuffe
   (void)_rehasher;
   (void)_o;
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const PixelShaderT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
+  auto _crc32 = _o->crc32;
   auto _code = _o->code.empty() ? 0 : _fbb.CreateString(_o->code);
   auto _entryName = _o->entryName.empty() ? 0 : _fbb.CreateString(_o->entryName);
   auto _cbuffers = _o->cbuffers.size() ? _fbb.CreateVector<flatbuffers::Offset<CBBundle>> (_o->cbuffers.size(), [](size_t i, _VectorArgs *__va) { return CreateCBBundle(*__va->__fbb, __va->__o->cbuffers[i].get(), __va->__rehasher); }, &_va ) : 0;
   return Fx::CreatePixelShader(
       _fbb,
+      _crc32,
       _code,
       _entryName,
       _cbuffers);

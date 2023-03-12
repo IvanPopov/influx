@@ -29,6 +29,9 @@ export function addSystemTypeBuiltin(scope: IScope) {
     generateSystemType(scope, "HullShader", 4);
     generateSystemType(scope, "DomainShader", 4);
 
+    generateSystemType(scope, "RenderTargetView", 4);
+    generateSystemType(scope, "DepthStencilView", 4);
+
     // generateSystemType(scope, "texture");
     // generateSystemType(scope, "sampler");
     // generateSystemType(scope, "sampler2D");

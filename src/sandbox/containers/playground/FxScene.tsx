@@ -22,7 +22,7 @@ import { ERenderStateValues } from '@lib/idl/ERenderStateValues';
 import { IMap } from '@lib/idl/IMap';
 import { Uniforms } from '@lib/idl/Uniforms';
 import { prepareTrimesh } from './utils/adjacency';
-import { Deps, IDeps } from './utils/deps';
+import { ResourceDependencies, IResourceDependencies } from './utils/deps';
 import { GuiView } from './utils/gui';
 import { GroupedUniforms } from './utils/GroupedUniforms';
 import { SingleUniforms } from './utils/SingleUniforms';
@@ -69,7 +69,7 @@ const textDocument = await createTextDocument('://raw', desc);
 const slDocument = await createSLDocument(textDocument);
 const PartLightT = typeAstToTypeLayout(slDocument.root.scope.findType('PartLight'));
 const Shaders = (id: string) => GLSL[id];
-const statsStyleFix: React.CSSProperties = {
+const STATS_CSS_PROPS: React.CSSProperties = {
     position: 'absolute',
     color: 'white',
     padding: '2px 5px',
@@ -201,7 +201,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
     protected gui = new GuiView;
     protected uniformGroups: GroupedUniforms = new GroupedUniforms;
     protected uniforms: IMap<THREE.IUniform>;
-    protected deps = new Deps;
+    protected deps = new ResourceDependencies;
 
     constructor(props) {
         super(props);
@@ -281,7 +281,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
                     indicating
                     style={progressStyleFix}
                 />
-                <div style={statsStyleFix}>
+                <div style={STATS_CSS_PROPS}>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;count: <span>{this.state.nParticles}</span><br />
                     simulation: CPU<br />
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fps: <span>{Math.round(this.state.fps.value)}</span><br />
@@ -704,7 +704,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
         const doLoadTexture = true;//Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
         const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
 
-        this.deps.resolve(doLoadTexture, doLoadMeshes, (deps: IDeps) => {
+        this.deps.resolve(doLoadTexture, doLoadMeshes, (deps: IResourceDependencies) => {
             this.createPasses(emitter);
         });
     }

@@ -3,55 +3,9 @@ include "cbuffer.fbs";
 
 namespace Fx;
 
-/*
-enum EDepthWriteMask {
-    k_Zero = 0,
-    k_All = 1
-}
-
-enum EComparisonFunc {
-    k_Never = 1,
-    k_Less = 2,
-    k_Equal = 3,
-    k_LessEqual = 4,
-    k_Greater = 5,
-    k_NotEqual = 6,
-    k_GreaterEqual = 7,
-    k_Always = 8
-}
-
-enum EStencilOp {
-    k_Keep = 1,
-    K_zero = 2,
-    k_Replace = 3,
-    k_IncrSat = 4,
-    k_DecrSat = 5,
-    k_Invert = 6,
-    k_Incr = 7,
-    k_Decr = 8
-}
-
-struct DepthStencilOpDesc {
-    StencilFailOp: EStencilOp;
-    StencilDepthFailOp: EStencilOp;
-    StencilPassOp: EStencilOp;
-    StencilFunc: EComparisonFunc;
-}
-
-struct DepthStencilState
-{
-    DepthEnable: bool;
-    DepthWriteMask: EDepthWriteMask;
-    DepthFunc: EComparisonFunc;
-    StencilEnable: bool;
-    StencilReadMask: number;
-    StencilWriteMask: number;
-    FrontFace: DepthStencilOpDesc;
-    BackFace: DepthStencilOpDesc;
-}
-*/
 table VertexShader 
 {
+    crc32: uint;
     code: string;
     entryName: string;
     input: TypeLayout; // VS_OUTPUT test_z_vs(VS_INPUT_AUTO_I _input)  
@@ -64,6 +18,7 @@ table VertexShader
 
 table PixelShader
 {
+    crc32: uint;
     code: string;
     entryName: string;
 
