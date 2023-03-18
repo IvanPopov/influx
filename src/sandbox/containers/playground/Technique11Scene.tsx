@@ -328,14 +328,13 @@ function threeDepthFuncFromDSState(depthStencilState: IDepthStencilState): THREE
 }
 
 
-function overrideGroupMaterial(group: THREE.Group, mat: THREE.RawShaderMaterial) {
-    if (!mat || !group) {
+function relinkThreeMeshAttributes(group: THREE.Group) {
+    if (!group) {
         return;
     }
 
     for (const object of group.children) {
         const mesh = object as THREE.Mesh;
-        mesh.material = mat;
 
         // IP: hack to support default geom layout like:
         // struct Geometry {
@@ -343,20 +342,30 @@ function overrideGroupMaterial(group: THREE.Group, mat: THREE.RawShaderMaterial)
         //  float3 normal: NORMAL0;
         //  float2 uv: TEXCOORD0;
         // };
-        // console.log(mesh.geometry.attributes);
-        // sandbox
-        mesh.geometry.attributes['a_position0'] = mesh.geometry.attributes.position;
-        mesh.geometry.attributes['a_normal0'] = mesh.geometry.attributes.normal;
-        mesh.geometry.attributes['a_texcoord0'] = mesh.geometry.attributes.uv;
 
-        mesh.geometry.attributes['a_position'] = mesh.geometry.attributes.position;
-        mesh.geometry.attributes['a_normal'] = mesh.geometry.attributes.normal;
-        mesh.geometry.attributes['a_texcoord'] = mesh.geometry.attributes.uv;
+        const attrs = { 
+        //    "THREE"         "SANDBOX"      "SANDBOX"      "HUSKY" 
+            'position'  : [ 'a_position0', 'a_position'  , 'a_v_position'   ],
+            'normal'    : [ 'a_normal0'  , 'a_normal'    , 'a_v_normal'     ],
+            'uv'        : [ 'a_texcoord0', 'a_texcoord'  , 'a_v_texcoord'   ]
+        };
 
-        // husky
-        mesh.geometry.attributes['a_v_position'] = mesh.geometry.attributes.position;
-        mesh.geometry.attributes['a_v_normal'] = mesh.geometry.attributes.normal;
-        mesh.geometry.attributes['a_v_texcoord0'] = mesh.geometry.attributes.uv;
+        for (const src in attrs) {
+            for (const dst of attrs[src]) {
+                mesh.geometry.attributes[dst] = mesh.geometry.attributes[src];
+            }
+        }
+    }
+}
+
+function overrideGroupMaterial(group: THREE.Group, mat: THREE.Material) {
+    if (!mat || !group) {
+        return;
+    }
+
+    for (const object of group.children) {
+        const mesh = object as THREE.Mesh;
+        mesh.material = mat;
     }
 }
 
@@ -410,8 +419,53 @@ function createRenderToTextureScene(quad: THREE.Group) {
 
 /** Render to texture quad object. */
 const rttQuad = createPlane();
+relinkThreeMeshAttributes(rttQuad);
+
 /** Dedicated render to texture scene of single object. */
 const rttScene = createRenderToTextureScene(rttQuad);
+
+import * as GLSL from './shaders/fx';
+const Shaders = (id: string) => GLSL[id];
+
+interface IRTViewProps {
+    aspect?: number; // w / h
+    size?: number;
+    x?: number;
+    y?: number;
+    texture: THREE.Texture;
+}
+
+function createRTViewerMaterial({ aspect = 1, size = 1, x = 0, y = 0, texture }: IRTViewProps) {
+    return new THREE.RawShaderMaterial({
+        uniforms: {
+            aspect: { value: aspect },
+            offset: { value: new THREE.Vector2(x, y) },
+            size: { value: size },
+            map: { value: texture }
+        },
+        vertexShader: Shaders('rtvVS'),
+        fragmentShader: Shaders('rtvFS'),
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide
+    });
+}
+
+function createRTViewer(props: IRTViewProps) {
+    const mat = createRTViewerMaterial(props);
+    const plane = createPlane();
+    plane.renderOrder = 0xFFFFFFFF; // render at the end
+    overrideGroupMaterial(plane, mat);
+    return plane;
+}
+
+function overrideRTViewerUniform(viewer: THREE.Group, name: string, value: any) {
+    ((viewer.children[0] as THREE.Mesh).material as THREE.RawShaderMaterial).uniforms[name].value = value;
+}
+
+function overrideRTViewerTexture(viewer: THREE.Group, tex: THREE.Texture) {
+    overrideRTViewerUniform(viewer, 'map', tex);
+}
 
 class Technique11Scene extends HDRScene<IProps, IState> {
     probe: THREE.Group;
@@ -467,6 +521,8 @@ class Technique11Scene extends HDRScene<IProps, IState> {
                     this.probe = await loadObjModel(name);
             }
 
+            relinkThreeMeshAttributes(this.probe);
+
             this.scene.add(this.probe);
         };
 
@@ -477,20 +533,42 @@ class Technique11Scene extends HDRScene<IProps, IState> {
 
 
     createRTVsDebugUi() {
+        const { mount, scene, dynamicTargets, rtvsRenderToScreen } = this;
         const { technique } = this.props;
-
+        const aspect = mount.clientWidth / mount.clientHeight;
+        const px = t => t;
+        const py = t => t * aspect;   
+        
         for (let i = 0; i < technique.getPassCount(); ++ i) {
             const pass = technique.getPass(i);
             const rtvs = pass.render.getRenderTargets();
             for (const rtv of rtvs) {
-                this.rtvsRenderToScreen[rtv.name] = false;
+                rtvsRenderToScreen[rtv.name] = false;
             }
         }
         
+        const pad = 0.05; // pad between targets
+        const size = 0.5; // size of target (% of width)
+
         const { gui } = this.gui;
         const rtFodler = gui.addFolder(`[render targets]`);
-        Object.keys(this.rtvsRenderToScreen).forEach(name => {
-            rtFodler.add(this.rtvsRenderToScreen, name);
+        Object.keys(rtvsRenderToScreen).forEach((name, i) => {
+            const x = 1.0 - px(size) - px(pad);
+            const y = 1.0 - py(size) - py(pad) - py((pad + size) * i);
+            const rtViewer = createRTViewer({ size, x, y, aspect, texture: null });
+            
+            rtFodler.add(rtvsRenderToScreen, name).onChange(value => {
+                // dynamic texture are created on demand (by requests from bytecode)
+                const tex = dynamicTargets?.[name].texture || null;
+                // todo: add resize support
+                overrideRTViewerTexture(rtViewer, tex);
+
+                if (value) {
+                    scene.add(rtViewer);
+                } else {
+                    scene.remove(rtViewer);
+                }
+            });
         });
     }
 
