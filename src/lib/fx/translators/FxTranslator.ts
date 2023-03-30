@@ -113,6 +113,7 @@ function typeNameOfUIControl(ctrl: IUIControl) {
     switch (type) {
         case 'color':
             return 'float4';
+        case 'bool':
         case 'int':
         case 'uint':
         case 'float':
@@ -643,6 +644,8 @@ export class FxTranslator<ContextT extends FxTranslatorContext> extends FxEmitte
             'ELAPSED_TIME',
             'ELAPSED_TIME_LEVEL',
             'FRAME_NUMBER',
+            'DATE',
+            'RESOLUTION',
 
             'PARENT_POSITION',              // << remove
             'MODEL_MATRIX',                 // << remove

@@ -10,10 +10,12 @@ import { EInstructionTypes, ITechniqueInstruction, ITypeInstruction } from "@lib
 import { ISLDocument } from "@lib/idl/ISLDocument";
 import { EPassDrawMode, IPartFxInstruction } from "@lib/idl/part/IPartFx";
 import { Diagnostics } from "@lib/util/Diagnostics";
-import { ConvolutionPackEx, encodeControlValue, encodePropertyValue, controlValueFromString, propertyValueFromString } from "./utils";
+import { controlValueFromString, ConvolutionPackEx, encodeControlValue, encodePropertyValue, propertyValueFromString } from "./utils";
 
+import * as flatbuffers from "flatbuffers";
+
+import { BufferBundleT } from "@lib/idl/bundles/auto/buffer-bundle";
 import { CBBundleT } from "@lib/idl/bundles/auto/cbbundle";
-import { BufferBundleT } from "@lib/idl/bundles/auto/fx/buffer-bundle";
 import { BundleT } from "@lib/idl/bundles/auto/fx/bundle";
 import { BundleContent } from "@lib/idl/bundles/auto/fx/bundle-content";
 import { BundleMetaT } from "@lib/idl/bundles/auto/fx/bundle-meta";
@@ -35,15 +37,13 @@ import { RoutineHLSLSourceBundleT } from "@lib/idl/bundles/auto/fx/routine-hlsls
 import { RoutineShaderBundleT } from "@lib/idl/bundles/auto/fx/routine-shader-bundle";
 import { RoutineSourceBundle } from "@lib/idl/bundles/auto/fx/routine-source-bundle";
 import { Technique11BundleT } from "@lib/idl/bundles/auto/fx/technique11bundle";
-import { TextureBundleT } from "@lib/idl/bundles/auto/fx/texture-bundle";
 import { TrimeshBundleT } from "@lib/idl/bundles/auto/fx/trimesh-bundle";
-import { UAVBundleT } from "@lib/idl/bundles/auto/fx/uavbundle";
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
 import { ViewTypePropertyT } from "@lib/idl/bundles/auto/fx/view-type-property";
+import { TextureBundleT } from "@lib/idl/bundles/auto/texture-bundle";
 import { TypeFieldT } from "@lib/idl/bundles/auto/type-field";
 import { TypeLayoutT } from "@lib/idl/bundles/auto/type-layout";
-import * as flatbuffers from "flatbuffers";
-
+import { UAVBundleT } from "@lib/idl/bundles/auto/uavbundle";
 
 
 export const PACKED = true;

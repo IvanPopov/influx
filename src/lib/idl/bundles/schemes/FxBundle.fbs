@@ -1,5 +1,8 @@
 include "type.fbs";
 include "cbuffer.fbs";
+include "texture.fbs";
+include "buffer.fbs";
+include "uav.fbs";
 include "technique11.fbs";
 
 namespace Fx;
@@ -20,31 +23,6 @@ table BundleMeta
 }
 
 
-
-
-table UAVBundle 
-{
-    name: string;
-    slot: uint;
-    stride: uint;
-    type: TypeLayout;
-}
-
-table BufferBundle 
-{
-    name: string;
-    slot: uint;
-    stride: uint;
-    type: TypeLayout;
-}
-
-table TextureBundle 
-{
-    name: string;
-    slot: uint;
-    stride: uint;
-    type: TypeLayout;
-}
 
 table TrimeshBundle
 {
@@ -204,6 +182,7 @@ table StringValue { value: string; }
 table TextureValue { value: string; }
 table MeshValue { value: string; }
 struct UintValue { value: uint; }
+struct BoolValue { value: bool; }
 struct IntValue { value: int; }
 struct FloatValue { value: float; }
 struct Float2Value { 
@@ -228,8 +207,8 @@ struct ColorValue {
     a: ubyte;
 }
 
-union PropertyValue { UintValue, IntValue, FloatValue, StringValue }
-union ControlValue { UintValue, IntValue, FloatValue, Float2Value, Float3Value, Float4Value, ColorValue, TextureValue, MeshValue }
+union PropertyValue { BoolValue, UintValue, IntValue, FloatValue, StringValue }
+union ControlValue { BoolValue, UintValue, IntValue, FloatValue, Float2Value, Float3Value, Float4Value, ColorValue, TextureValue, MeshValue }
 
 table ViewTypeProperty 
 {

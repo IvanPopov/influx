@@ -3,6 +3,7 @@
 import * as flatbuffers from 'flatbuffers';
 
 import { CBBundle, CBBundleT } from '../cbbundle';
+import { TextureBundle, TextureBundleT } from '../texture-bundle';
 import { TypeLayout, TypeLayoutT } from '../type-layout';
 
 
@@ -58,8 +59,18 @@ cbuffersLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+textures(index: number, obj?:TextureBundle):TextureBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? (obj || new TextureBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+texturesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 14);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startVertexShader(builder:flatbuffers.Builder) {
-  builder.startObject(5);
+  builder.startObject(6);
 }
 
 static addCrc32(builder:flatbuffers.Builder, crc32:number) {
@@ -94,6 +105,22 @@ static startCbuffersVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addTextures(builder:flatbuffers.Builder, texturesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(5, texturesOffset, 0);
+}
+
+static createTexturesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startTexturesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endVertexShader(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
@@ -106,7 +133,8 @@ unpack(): VertexShaderT {
     this.code(),
     this.entryName(),
     (this.input() !== null ? this.input()!.unpack() : null),
-    this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength())
+    this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength()),
+    this.bb!.createObjList(this.textures.bind(this), this.texturesLength())
   );
 }
 
@@ -117,6 +145,7 @@ unpackTo(_o: VertexShaderT): void {
   _o.entryName = this.entryName();
   _o.input = (this.input() !== null ? this.input()!.unpack() : null);
   _o.cbuffers = this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength());
+  _o.textures = this.bb!.createObjList(this.textures.bind(this), this.texturesLength());
 }
 }
 
@@ -126,7 +155,8 @@ constructor(
   public code: string|Uint8Array|null = null,
   public entryName: string|Uint8Array|null = null,
   public input: TypeLayoutT|null = null,
-  public cbuffers: (CBBundleT)[] = []
+  public cbuffers: (CBBundleT)[] = [],
+  public textures: (TextureBundleT)[] = []
 ){}
 
 
@@ -135,6 +165,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const entryName = (this.entryName !== null ? builder.createString(this.entryName!) : 0);
   const input = (this.input !== null ? this.input!.pack(builder) : 0);
   const cbuffers = VertexShader.createCbuffersVector(builder, builder.createObjectOffsetList(this.cbuffers));
+  const textures = VertexShader.createTexturesVector(builder, builder.createObjectOffsetList(this.textures));
 
   VertexShader.startVertexShader(builder);
   VertexShader.addCrc32(builder, this.crc32);
@@ -142,6 +173,7 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   VertexShader.addEntryName(builder, entryName);
   VertexShader.addInput(builder, input);
   VertexShader.addCbuffers(builder, cbuffers);
+  VertexShader.addTextures(builder, textures);
 
   return VertexShader.endVertexShader(builder);
 }

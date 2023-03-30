@@ -29,7 +29,7 @@ function createPlaceholderTexture(width = 512, height = 512) {
 
 export const TEXTURE_PLACEHOLDER_WHITE_1X1 = createPlaceholderTexture(1, 1);
 
-export function controlValueToThreeValue(ctrl: ControlValueType, type: string, deps: IResourceDependencies): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | THREE.Texture {
+export function controlValueToThreeValue(ctrl: ControlValueType, type: string, deps: IResourceDependencies): THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | Boolean | THREE.Texture {
     let ab = new ArrayBuffer(4);
     let dv = new DataView(ab);
     switch (type) {
@@ -58,6 +58,8 @@ export function controlValueToThreeValue(ctrl: ControlValueType, type: string, d
         case 'int':
         case 'float':
             return ctrl as Number;
+        case 'bool':
+            return ctrl as Boolean;
         default:
             console.error('unsupported type found');
     }
@@ -66,17 +68,20 @@ export function controlValueToThreeValue(ctrl: ControlValueType, type: string, d
 
 
 
-export function typedNumberToF32Num(num: number, type: string): number {
+export function typedNumberToF32Num(num: number | boolean, type: string): number {
     let ab = new ArrayBuffer(4);
     let dv = new DataView(ab);
     switch (type) {
         case 'float':
-            return num;
+            return +num;
         case 'int':
-            dv.setInt32(0, num);
+            dv.setInt32(0, +num);
             return dv.getFloat32(0);
         case 'uint':
-            dv.setUint32(0, num);
+            dv.setUint32(0, +num);
+            return dv.getFloat32(0);
+        case 'bool':
+            dv.setUint32(0, +num);
             return dv.getFloat32(0);
         default:
             console.error('unsupported type found');

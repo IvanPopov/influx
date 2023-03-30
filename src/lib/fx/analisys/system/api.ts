@@ -66,6 +66,7 @@ export function addSystemFunctions(scope: IScope): void {
     generateSystemFunction(scope, "clamp", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float", "float"], ["float2", "float3", "float4"]);
 
     generateSystemFunction(scope, "pow", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float", "float2", "float3", "float4"]);
+    generateSystemFunction(scope, "pow", TEMPLATE_TYPE, [TEMPLATE_TYPE,TEMPLATE_TYPE], ["float2", "float3", "float4"]);
     generateSystemFunction(scope, "mod", TEMPLATE_TYPE, [TEMPLATE_TYPE, TEMPLATE_TYPE], ["float2", "float3", "float4"]);
     generateSystemFunction(scope, "mod", TEMPLATE_TYPE, [TEMPLATE_TYPE, "float"], ["float2", "float3", "float4"]);
     generateSystemFunction(scope, "exp", TEMPLATE_TYPE, [TEMPLATE_TYPE], ["float", "float2", "float3", "float4"]);

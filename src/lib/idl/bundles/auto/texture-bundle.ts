@@ -2,25 +2,25 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { TypeLayout, TypeLayoutT } from '../type-layout';
+import { TypeLayout, TypeLayoutT } from './type-layout';
 
 
-export class UAVBundle {
+export class TextureBundle {
   bb: flatbuffers.ByteBuffer|null = null;
   bb_pos = 0;
-  __init(i:number, bb:flatbuffers.ByteBuffer):UAVBundle {
+  __init(i:number, bb:flatbuffers.ByteBuffer):TextureBundle {
   this.bb_pos = i;
   this.bb = bb;
   return this;
 }
 
-static getRootAsUAVBundle(bb:flatbuffers.ByteBuffer, obj?:UAVBundle):UAVBundle {
-  return (obj || new UAVBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+static getRootAsTextureBundle(bb:flatbuffers.ByteBuffer, obj?:TextureBundle):TextureBundle {
+  return (obj || new TextureBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
-static getSizePrefixedRootAsUAVBundle(bb:flatbuffers.ByteBuffer, obj?:UAVBundle):UAVBundle {
+static getSizePrefixedRootAsTextureBundle(bb:flatbuffers.ByteBuffer, obj?:TextureBundle):TextureBundle {
   bb.setPosition(bb.position() + flatbuffers.SIZE_PREFIX_LENGTH);
-  return (obj || new UAVBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+  return (obj || new TextureBundle()).__init(bb.readInt32(bb.position()) + bb.position(), bb);
 }
 
 name():string|null
@@ -45,7 +45,7 @@ type(obj?:TypeLayout):TypeLayout|null {
   return offset ? (obj || new TypeLayout()).__init(this.bb!.__indirect(this.bb_pos + offset), this.bb!) : null;
 }
 
-static startUAVBundle(builder:flatbuffers.Builder) {
+static startTextureBundle(builder:flatbuffers.Builder) {
   builder.startObject(4);
 }
 
@@ -65,14 +65,14 @@ static addType(builder:flatbuffers.Builder, typeOffset:flatbuffers.Offset) {
   builder.addFieldOffset(3, typeOffset, 0);
 }
 
-static endUAVBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
+static endTextureBundle(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
 
-unpack(): UAVBundleT {
-  return new UAVBundleT(
+unpack(): TextureBundleT {
+  return new TextureBundleT(
     this.name(),
     this.slot(),
     this.stride(),
@@ -81,7 +81,7 @@ unpack(): UAVBundleT {
 }
 
 
-unpackTo(_o: UAVBundleT): void {
+unpackTo(_o: TextureBundleT): void {
   _o.name = this.name();
   _o.slot = this.slot();
   _o.stride = this.stride();
@@ -89,7 +89,7 @@ unpackTo(_o: UAVBundleT): void {
 }
 }
 
-export class UAVBundleT {
+export class TextureBundleT {
 constructor(
   public name: string|Uint8Array|null = null,
   public slot: number = 0,
@@ -102,12 +102,12 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const name = (this.name !== null ? builder.createString(this.name!) : 0);
   const type = (this.type !== null ? this.type!.pack(builder) : 0);
 
-  UAVBundle.startUAVBundle(builder);
-  UAVBundle.addName(builder, name);
-  UAVBundle.addSlot(builder, this.slot);
-  UAVBundle.addStride(builder, this.stride);
-  UAVBundle.addType(builder, type);
+  TextureBundle.startTextureBundle(builder);
+  TextureBundle.addName(builder, name);
+  TextureBundle.addSlot(builder, this.slot);
+  TextureBundle.addStride(builder, this.stride);
+  TextureBundle.addType(builder, type);
 
-  return UAVBundle.endUAVBundle(builder);
+  return TextureBundle.endTextureBundle(builder);
 }
 }

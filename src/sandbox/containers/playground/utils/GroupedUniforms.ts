@@ -1,14 +1,22 @@
 import { ITimeline } from "@lib/fx/timeline";
-import { IConstanBufferField, IConstantBuffer, ITechnique9 } from "@lib/idl/ITechnique9";
+import { AUTOGEN_CONTROLS, AUTOGEN_GLOBALS } from "@lib/fx/translators/FxTranslator";
+import { IConstanBufferField, IConstantBuffer } from "@lib/idl/ITechnique";
+import { ITechnique9 } from "@lib/idl/ITechnique9";
 import { IPlaygroundControlsState } from "@sandbox/store/IStoreState";
 import * as THREE from 'three';
-import { IResourceDependencies } from "./deps";
 import { controlValueToThreeValue, typedNumberToF32Num } from "./controls";
-import { AUTOGEN_CONTROLS, AUTOGEN_GLOBALS } from "@lib/fx/translators/FxTranslator";
+import { IResourceDependencies } from "./deps";
 
 export interface IViewport {
-    clientWidth: number;
-    clientHeight: number;
+    width: number;
+    height: number;
+}
+
+export function div2Viewport({ clientWidth, clientHeight }: HTMLDivElement): IViewport {
+    const pixelRatio = window.devicePixelRatio;
+    const width = clientWidth * pixelRatio;
+    const height = clientHeight * pixelRatio;
+    return { width, height };
 }
 
 function copyVec4({ padding }: IConstanBufferField, v: THREE.Vector4, group: THREE.UniformsGroup) {
@@ -24,11 +32,11 @@ function copyVec3({ padding }: IConstanBufferField, src: THREE.Vector3, group: T
     src.toArray().forEach((x, i) => dst.setComponent(pad + i, x));
 }
 
-function copyVec2({ padding }: IConstanBufferField, { x, y }: THREE.Vector2, group: THREE.UniformsGroup) {
+function copyVec2({ padding }: IConstanBufferField, src: THREE.Vector2, group: THREE.UniformsGroup) {
     const pos = (padding / 16) >>> 0; // in vector
     const pad = (padding % 16) / 4;
-    console.assert(pad == 0, 'non zero paddings are not supported');
-    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([x, y], 0);
+    const dst = group.uniforms[pos + 0].value as THREE.Vector4;
+    src.toArray().forEach((x, i) => dst.setComponent(pad + i, x));
 }
 
 function copyMat4x4({ padding }: IConstanBufferField, mat: THREE.Matrix4, group: THREE.UniformsGroup) {
@@ -66,7 +74,7 @@ function copyControl(
 
     const ctrl = state.controls[name];
     const val = state.values[name];
-    if (['uint', 'int', 'uint', 'float'].indexOf(ctrl.type) !== -1) {
+    if (['bool', 'uint', 'int', 'uint', 'float'].indexOf(ctrl.type) !== -1) {
         const f32Num = typedNumberToF32Num(controlValueToThreeValue(val, ctrl.type, deps) as number, ctrl.type);
         (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, f32Num);
     } else {
@@ -80,6 +88,11 @@ function copyFloat32({ padding }: IConstanBufferField, value: number, group: THR
     (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, value);
 }
 
+function copyUint32({ padding }: IConstanBufferField, value: number, group: THREE.UniformsGroup) {
+    const pos = (padding / 16) >>> 0;
+    const pad = (padding % 16) / 4;
+    (group.uniforms[pos].value as THREE.Vector4).setComponent(pad, typedNumberToF32Num(value, 'uint'));
+}
 
 function transpose(mat: THREE.Matrix4): THREE.Matrix4 {
     return (new THREE.Matrix4).copy(mat).transpose();
@@ -170,8 +183,27 @@ export class GroupedUniforms {
         const modelViewProjMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, modelViewMatrix);
         const viewProjMatrix = (new THREE.Matrix4).multiplyMatrices(projMatrix, viewMatrix);
 
-        const { clientWidth, clientHeight } = viewport;
+        const { width, height } = viewport;
         const constants = timeline.getConstants();
+
+        const resolution = new THREE.Vector2(width, height);
+        const date = new THREE.Vector4();
+        {
+            const now = new Date();
+            const year = now.getFullYear();     // ~2020
+            const month = now.getMonth();       // 0 - 11
+            const day = now.getDate();          // 0 - 30
+            const hour = now.getHours();        // 0 - 23
+            const min = now.getMinutes();       // 0 - 59
+            const sec = now.getSeconds();       // 0 - 60
+            const msec = now.getMilliseconds(); // 0 - 999
+
+            date.x = year;
+            date.y = month;
+            date.z = day;
+            date.w = hour * 60.0 + min * 60.0 + sec + msec / 1000.0;
+        }
+
 
         for (let c = 0; c < cbuffers.length; ++c) {
             let cbuf = cbuffers[c];
@@ -203,7 +235,13 @@ export class GroupedUniforms {
                                 copyFloat32(field, constants.elapsedTime, group);
                                 break;
                             case 'FRAME_NUMBER':
-                                copyFloat32(field, constants.frameNumber, group);
+                                copyUint32(field, constants.frameNumber, group);
+                                break;
+                            case 'RESOLUTION':
+                                copyVec2(field, resolution, group);
+                                break;
+                            case 'DATE':
+                                copyVec4(field, date, group);
                                 break;
                             // todo: move to locals
                             case 'MODEL_MATRIX':
@@ -228,7 +266,7 @@ export class GroupedUniforms {
                                 break;
                             default:
                                 // todo: emit once (!)
-                                console.error(`GLOBAL_UNIFORMS: unknown semantic <${field.semantic}> found.`);
+                                // console.error(`GLOBAL_UNIFORMS: unknown semantic <${field.semantic}> found.`);
                         }
                     }
                     break;
@@ -242,7 +280,7 @@ export class GroupedUniforms {
                             case 'COMMON_VP_PARAMS':
                                 {
                                     const pos = (field.padding / 16) >>> 0; // in vector
-                                    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1.0 / clientWidth, 1.0 / clientHeight, 0.5 / clientWidth, 0.5 / clientHeight]);
+                                    (group.uniforms[pos + 0].value as THREE.Vector4).fromArray([1.0 / width, 1.0 / height, 0.5 / width, 0.5 / height]);
                                 }
                                 break;
                             case 'VS_REG_COMMON_OBJ_WORLD_MATRIX_DEBUG':

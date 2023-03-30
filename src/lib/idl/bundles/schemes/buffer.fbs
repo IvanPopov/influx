@@ -1,0 +1,9 @@
+include "type.fbs";
+
+table BufferBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}

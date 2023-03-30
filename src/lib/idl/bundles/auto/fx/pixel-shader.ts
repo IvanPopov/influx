@@ -3,6 +3,7 @@
 import * as flatbuffers from 'flatbuffers';
 
 import { CBBundle, CBBundleT } from '../cbbundle';
+import { TextureBundle, TextureBundleT } from '../texture-bundle';
 
 
 export class PixelShader {
@@ -52,8 +53,18 @@ cbuffersLength():number {
   return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
 }
 
+textures(index: number, obj?:TextureBundle):TextureBundle|null {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? (obj || new TextureBundle()).__init(this.bb!.__indirect(this.bb!.__vector(this.bb_pos + offset) + index * 4), this.bb!) : null;
+}
+
+texturesLength():number {
+  const offset = this.bb!.__offset(this.bb_pos, 12);
+  return offset ? this.bb!.__vector_len(this.bb_pos + offset) : 0;
+}
+
 static startPixelShader(builder:flatbuffers.Builder) {
-  builder.startObject(4);
+  builder.startObject(5);
 }
 
 static addCrc32(builder:flatbuffers.Builder, crc32:number) {
@@ -84,17 +95,34 @@ static startCbuffersVector(builder:flatbuffers.Builder, numElems:number) {
   builder.startVector(4, numElems, 4);
 }
 
+static addTextures(builder:flatbuffers.Builder, texturesOffset:flatbuffers.Offset) {
+  builder.addFieldOffset(4, texturesOffset, 0);
+}
+
+static createTexturesVector(builder:flatbuffers.Builder, data:flatbuffers.Offset[]):flatbuffers.Offset {
+  builder.startVector(4, data.length, 4);
+  for (let i = data.length - 1; i >= 0; i--) {
+    builder.addOffset(data[i]!);
+  }
+  return builder.endVector();
+}
+
+static startTexturesVector(builder:flatbuffers.Builder, numElems:number) {
+  builder.startVector(4, numElems, 4);
+}
+
 static endPixelShader(builder:flatbuffers.Builder):flatbuffers.Offset {
   const offset = builder.endObject();
   return offset;
 }
 
-static createPixelShader(builder:flatbuffers.Builder, crc32:number, codeOffset:flatbuffers.Offset, entryNameOffset:flatbuffers.Offset, cbuffersOffset:flatbuffers.Offset):flatbuffers.Offset {
+static createPixelShader(builder:flatbuffers.Builder, crc32:number, codeOffset:flatbuffers.Offset, entryNameOffset:flatbuffers.Offset, cbuffersOffset:flatbuffers.Offset, texturesOffset:flatbuffers.Offset):flatbuffers.Offset {
   PixelShader.startPixelShader(builder);
   PixelShader.addCrc32(builder, crc32);
   PixelShader.addCode(builder, codeOffset);
   PixelShader.addEntryName(builder, entryNameOffset);
   PixelShader.addCbuffers(builder, cbuffersOffset);
+  PixelShader.addTextures(builder, texturesOffset);
   return PixelShader.endPixelShader(builder);
 }
 
@@ -103,7 +131,8 @@ unpack(): PixelShaderT {
     this.crc32(),
     this.code(),
     this.entryName(),
-    this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength())
+    this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength()),
+    this.bb!.createObjList(this.textures.bind(this), this.texturesLength())
   );
 }
 
@@ -113,6 +142,7 @@ unpackTo(_o: PixelShaderT): void {
   _o.code = this.code();
   _o.entryName = this.entryName();
   _o.cbuffers = this.bb!.createObjList(this.cbuffers.bind(this), this.cbuffersLength());
+  _o.textures = this.bb!.createObjList(this.textures.bind(this), this.texturesLength());
 }
 }
 
@@ -121,7 +151,8 @@ constructor(
   public crc32: number = 0,
   public code: string|Uint8Array|null = null,
   public entryName: string|Uint8Array|null = null,
-  public cbuffers: (CBBundleT)[] = []
+  public cbuffers: (CBBundleT)[] = [],
+  public textures: (TextureBundleT)[] = []
 ){}
 
 
@@ -129,12 +160,14 @@ pack(builder:flatbuffers.Builder): flatbuffers.Offset {
   const code = (this.code !== null ? builder.createString(this.code!) : 0);
   const entryName = (this.entryName !== null ? builder.createString(this.entryName!) : 0);
   const cbuffers = PixelShader.createCbuffersVector(builder, builder.createObjectOffsetList(this.cbuffers));
+  const textures = PixelShader.createTexturesVector(builder, builder.createObjectOffsetList(this.textures));
 
   return PixelShader.createPixelShader(builder,
     this.crc32,
     code,
     entryName,
-    cbuffers
+    cbuffers,
+    textures
   );
 }
 }

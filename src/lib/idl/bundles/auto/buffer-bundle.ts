@@ -2,7 +2,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { TypeLayout, TypeLayoutT } from '../type-layout';
+import { TypeLayout, TypeLayoutT } from './type-layout';
 
 
 export class BufferBundle {

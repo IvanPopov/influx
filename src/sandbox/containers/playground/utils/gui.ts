@@ -33,7 +33,7 @@ export class GuiView {
     preset(): string {
         return this.presetName;
     }
-    
+
     static hash(controls: IPlaygroundControlsState): string {
         return JSON.stringify(controls.controls) +
             JSON.stringify(controls.presets) +
@@ -62,10 +62,7 @@ export class GuiView {
             this.remove();
         }
 
-        if (Object.keys(controls.values).length == 0) {
-            // empty controls are valid ?
-            return null;
-        }
+
 
         if (this.gui) {
             // nothing todo, same controls have been requested
@@ -79,85 +76,88 @@ export class GuiView {
 
         const gui = new GUI({ autoPlace: false });
 
-        for (let name in controls.values) {
-            let ctrl = controls.controls[name];
-            let viewType = ctrl.properties["__type"] as string || ctrl.type;
-            let caption = ctrl.properties["__caption"] as string || ctrl.name;
-            let guiCtrl = null;
-            switch (viewType) {
-                case 'int':
-                case 'uint':
-                case 'float':
-                    guiCtrl = gui.add(controls.values, name);
-                    break;
-                case 'slider':
-                    let min = ctrl.properties["__min"] as number;
-                    let max = ctrl.properties["__max"] as number;
-                    let step = ctrl.properties["__step"] as number;
-                    guiCtrl = gui.add(controls.values, name, min, max, step);
-                    break;
-                case 'color':
-                    let colorFolder = gui.addFolder(caption);
-                    let clr = controls.values[name] as Color;
-                    colorFolder.addColor({ color: colorToUint(clr) }, 'color').onChange(value => uintToColor(value, clr));
-                    colorFolder.add({ opacity: clr.a }, 'opacity', 0, 1).onChange(value => clr.a = value);
-                    colorFolder.open();
-                    break;
-                case 'float2':
-                    let vec2Folder = gui.addFolder(caption);
-                    vec2Folder.add(controls.values[name], 'x');
-                    vec2Folder.add(controls.values[name], 'y');
-                    vec2Folder.close();
-                    break;
-                case 'float3':
-                    let vec3Folder = gui.addFolder(caption);
-                    vec3Folder.add(controls.values[name], 'x');
-                    vec3Folder.add(controls.values[name], 'y');
-                    vec3Folder.add(controls.values[name], 'z');
-                    vec3Folder.close();
-                    break;
-                case 'float4':
-                    let vec4Folder = gui.addFolder(caption);
-                    vec4Folder.add(controls.values[name], 'x');
-                    vec4Folder.add(controls.values[name], 'y');
-                    vec4Folder.add(controls.values[name], 'z');
-                    vec4Folder.add(controls.values[name], 'w');
-                    vec4Folder.close();
-                    break;
-                case 'texture2d':
-                    {
-                        const list = GetAssetsTextures();
-                        let def = controls.values[name] as string;
-                        if (!list.includes(def)) {
-                            def = list[0];
-                        }
-                        // override initial value if it does not suit available resources
-                        gui.add(controls.values, name, list).setValue(def);
-                    }
-                    break;
-                case 'mesh':
-                    {
-                        let def = controls.values[name] as string;
-                        const list = GetAssetsModels();
-                        if (!list.includes(def)) {
-                            def = list[0];
-                        }
-                        // override initial value if it does not suit available resources
-                        const folder = gui.addFolder(caption);
-                        folder.add(controls.values, name, list).setValue(def);
-                        
+        if (Object.keys(controls.values).length > 0) {
+            for (let name in controls.values) {
+                let ctrl = controls.controls[name];
+                let viewType = ctrl.properties["__type"] as string || ctrl.type;
+                let caption = ctrl.properties["__caption"] as string || ctrl.name;
+                let guiCtrl = null;
+                switch (viewType) {
+                    case 'bool':
+                    case 'int':
+                    case 'uint':
+                    case 'float':
+                        guiCtrl = gui.add(controls.values, name);
+                        break;
+                    case 'slider':
+                        let min = ctrl.properties["__min"] as number;
+                        let max = ctrl.properties["__max"] as number;
+                        let step = ctrl.properties["__step"] as number;
+                        guiCtrl = gui.add(controls.values, name, min, max, step);
+                        break;
+                    case 'color':
+                        let colorFolder = gui.addFolder(caption);
+                        let clr = controls.values[name] as Color;
+                        colorFolder.addColor({ color: colorToUint(clr) }, 'color').onChange(value => uintToColor(value, clr));
+                        colorFolder.add({ opacity: clr.a }, 'opacity', 0, 1).onChange(value => clr.a = value);
+                        colorFolder.open();
+                        break;
+                    case 'float2':
+                        let vec2Folder = gui.addFolder(caption);
+                        vec2Folder.add(controls.values[name], 'x');
+                        vec2Folder.add(controls.values[name], 'y');
+                        vec2Folder.close();
+                        break;
+                    case 'float3':
+                        let vec3Folder = gui.addFolder(caption);
+                        vec3Folder.add(controls.values[name], 'x');
+                        vec3Folder.add(controls.values[name], 'y');
+                        vec3Folder.add(controls.values[name], 'z');
+                        vec3Folder.close();
+                        break;
+                    case 'float4':
+                        let vec4Folder = gui.addFolder(caption);
+                        vec4Folder.add(controls.values[name], 'x');
+                        vec4Folder.add(controls.values[name], 'y');
+                        vec4Folder.add(controls.values[name], 'z');
+                        vec4Folder.add(controls.values[name], 'w');
+                        vec4Folder.close();
+                        break;
+                    case 'texture2d':
                         {
-                            this.meshDebugDraw[name] ||= false;
-                            folder.add(this.meshDebugDraw, name).name('show (debug)');
+                            const list = GetAssetsTextures();
+                            let def = controls.values[name] as string;
+                            if (!list.includes(def)) {
+                                def = list[0];
+                            }
+                            // override initial value if it does not suit available resources
+                            gui.add(controls.values, name, list).setValue(def);
                         }
-                        
-                        folder.open();
-                    }
-                    break;
-            }
+                        break;
+                    case 'mesh':
+                        {
+                            let def = controls.values[name] as string;
+                            const list = GetAssetsModels();
+                            if (!list.includes(def)) {
+                                def = list[0];
+                            }
+                            // override initial value if it does not suit available resources
+                            const folder = gui.addFolder(caption);
+                            folder.add(controls.values, name, list).setValue(def);
 
-            if (guiCtrl) {
-                guiCtrl.name(caption);
+                            {
+                                this.meshDebugDraw[name] ||= false;
+                                folder.add(this.meshDebugDraw, name).name('show (debug)');
+                            }
+
+                            folder.open();
+                        }
+                        break;
+                }
+
+                if (guiCtrl) {
+                    guiCtrl.name(caption);
+                }
             }
         }
 
@@ -200,7 +200,7 @@ export class GuiView {
 
         gui.domElement.style.position = 'absolute';
         gui.domElement.style.top = '2px';
-        
+
         this.gui = gui;
         this.hash = hash;
 

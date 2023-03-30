@@ -31,6 +31,7 @@ import { Technique11RenderPassT } from "@lib/idl/bundles/auto/fx/technique11rend
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
 import { VertexShaderT } from "@lib/idl/bundles/auto/fx/vertex-shader";
 import { ViewTypePropertyT } from "@lib/idl/bundles/auto/fx/view-type-property";
+import { TextureBundleT } from "@lib/idl/bundles/auto/texture-bundle";
 
 
 /** Create flatbuffers controls from native translator description. */
@@ -166,17 +167,24 @@ async function createTechnique11Bundle(tech: ITechnique11Instruction, opts: Bund
                     return new CBBundleT(name, register, size, fields);
                 });
 
+                const textures = ctx.textures.map(({ name, register: slot, elementType }) => {
+                    const typeInstr = slDocument.root.scope.findType(elementType);
+                    const stride = typeInstr.size; // in bytes
+                    const type = typeAstToTypeLayout(typeInstr);
+                    return new TextureBundleT(name, slot, stride, type);
+                });
+            
                 let shaderType: Shader;
                 let shader: VertexShaderT | PixelShaderT;
                 switch (mode) {
                     case 'vs': 
                     let input = typeAstToTypeLayout(entryFn.def.params[0].type);
                     shaderType = Shader.VertexShader;
-                    shader = new VertexShaderT(crc32(sourceCode), sourceCode, name, input, cbuffers);
+                    shader = new VertexShaderT(crc32(sourceCode), sourceCode, name, input, cbuffers, textures);
                     break;
                     case 'ps':
                     shaderType = Shader.PixelShader;
-                    shader = new PixelShaderT(crc32(sourceCode), sourceCode, name, cbuffers);
+                    shader = new PixelShaderT(crc32(sourceCode), sourceCode, name, cbuffers, textures);
                     break;
                     default:
                         assert(false, 'not implemeted');

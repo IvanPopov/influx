@@ -1,0 +1,10 @@
+include "type.fbs";
+
+table UAVBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}
+

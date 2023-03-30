@@ -51,13 +51,13 @@ std::string UavPrerenderedSorted(uint32_t i)
 }
 
 
-VM::BUNDLE_UAV CreateUAVEx(const Fx::UAVBundleT &bundle, int capacity)
+VM::BUNDLE_UAV CreateUAVEx(const UAVBundleT &bundle, int capacity)
 {
     return VM::BUNDLE::CreateUAV(bundle.name, bundle.stride, capacity, bundle.slot);
 }
 
 
-std::vector<VM::BUNDLE_UAV> CreateUAVsEx(const std::vector<std::unique_ptr<Fx::UAVBundleT>> &bundles, int capacity, std::vector<VM::BUNDLE_UAV> &sharedUAVs)
+std::vector<VM::BUNDLE_UAV> CreateUAVsEx(const std::vector<std::unique_ptr<UAVBundleT>> &bundles, int capacity, std::vector<VM::BUNDLE_UAV> &sharedUAVs)
 {
     std::vector<VM::BUNDLE_UAV> uavs;
     for (auto &uavBundle : bundles)
@@ -417,12 +417,12 @@ void IFX::EMITTER::ReloadBundles(void* buf)
             // if no prerender bundle then all particles must be prerendered within update stage
             // looking for prerendered reflection among prerender or update routine uavs
             auto &prerenderUAVs = (bundle ? routines[Fx::EPartRenderRoutines_k_Prerender] : simulationRoutines[Fx::EPartSimRoutines_k_Update]).AsRoutineBytecodeBundle()->resources->uavs;
-            auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<Fx::UAVBundleT> &uav)
+            auto uavPrerendReflect = std::find_if(std::begin(prerenderUAVs), std::end(prerenderUAVs), [&](const std::unique_ptr<UAVBundleT> &uav)
                                                 { return uav->name == UavPrerendered(i); });
 
             {
-                std::vector<std::unique_ptr<Fx::UAVBundleT>> bundles;
-                bundles.push_back(std::make_unique<Fx::UAVBundleT>(**uavPrerendReflect));
+                std::vector<std::unique_ptr<UAVBundleT>> bundles;
+                bundles.push_back(std::make_unique<UAVBundleT>(**uavPrerendReflect));
                 bundles.back()->name = UavPrerenderedSorted(i);
 
                 CreateUAVsEx(bundles, capacity * instanceCount, sharedUAVs);

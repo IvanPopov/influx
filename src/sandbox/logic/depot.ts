@@ -8,22 +8,29 @@ import * as path from 'path';
 import { ASSETS_MANIFEST, ASSETS_PATH, DEFAULT_FILENAME, DEPOT_PATH, EXT_FILTER, LIB_PATH } from './common';
 import { isString } from '@lib/common';
 
-async function feedFakeDepot(root: IDepotFolder) {
-    let demos = depotNode();
-    demos.files = <string[]>Object.values(ASSETS_MANIFEST['fx']['demos'])
-    .filter(file => isString(file))
-    .map(file => `${DEPOT_PATH}${file}`) 
-    .sort();
-    demos.path = '/demos';
-    demos.totalFiles = demos.files.length;
+function depotNodeFromManifest(manifest: Object, path = '/') {
+    let node = depotNode();
+    node.files = <string[]>Object.values(manifest)
+        .filter(entry => isString(entry))
+        .map(file => `${DEPOT_PATH}${file}`) 
+        .sort();
+    
+    for (let entryName in manifest) {
+        const entry = manifest[entryName];
+        if (!isString(entry)) {
+            node.folders ||= [];
+            node.folders.push(depotNodeFromManifest(entry, `${path}${entryName}`));
+        }
+    }
 
-    let graph = depotNode();
-    graph.files = <string[]>Object.values(ASSETS_MANIFEST['graph'])
-    .filter(file => isString(file))
-    .map(file => `${DEPOT_PATH}${file}`) 
-    .sort();
-    graph.path = '/graph';
-    graph.totalFiles = graph.files.length;
+    node.path = path;
+    node.totalFiles = node.folders.reduce((prev, curr) => prev + curr.totalFiles, node.files.length);
+    return node;
+}
+
+async function feedFakeDepot(root: IDepotFolder) {
+    const demos = depotNodeFromManifest(ASSETS_MANIFEST['fx']['demos'], '/demos');
+    const graph = depotNodeFromManifest(ASSETS_MANIFEST['graph'], '/graph');
 
     root.folders = [ demos, graph ];
     root.path = '/';

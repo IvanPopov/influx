@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import HDRScene from './HDRScene';
 import { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import { ResourceDependencies } from './utils/deps';
-import { GroupedUniforms } from './utils/GroupedUniforms';
+import { div2Viewport, GroupedUniforms } from './utils/GroupedUniforms';
 import { GuiView } from './utils/gui';
 import { SingleUniforms } from './utils/SingleUniforms';
 
@@ -210,9 +210,10 @@ class Technique9Scene extends HDRScene<IProps, IState> {
     protected override beginFrame(): void {
         const { timeline, controls, material } = this.props;
         const { deps, camera, mount } = this;
+        const viewport = div2Viewport(mount);
 
         SingleUniforms.update(controls, timeline, deps, this.uniforms);
-        this.uniformGroups.update9(camera, mount, controls, timeline, deps, material);
+        this.uniformGroups.update9(camera, viewport, controls, timeline, deps, material);
 
         super.beginFrame();
     }

@@ -1,7 +1,9 @@
 include "type.fbs";
 include "cbuffer.fbs";
+include "texture.fbs";
 
 namespace Fx;
+
 
 table VertexShader 
 {
@@ -14,6 +16,7 @@ table VertexShader
     // only cbuffers direcly used by user (!)
     // resources from includes will not be presented here
     cbuffers: [ CBBundle ];
+    textures: [ TextureBundle ];
 }
 
 table PixelShader
@@ -26,6 +29,7 @@ table PixelShader
     // only cbuffers direcly used by user (!)
     // resources from includes will not be presented here
     cbuffers: [ CBBundle ];
+    textures: [ TextureBundle ];
 }
 
 union Shader { VertexShader, PixelShader }

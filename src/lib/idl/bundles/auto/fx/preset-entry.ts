@@ -2,6 +2,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
+import { BoolValue, BoolValueT } from '../fx/bool-value';
 import { ColorValue, ColorValueT } from '../fx/color-value';
 import { ControlValue, unionToControlValue, unionListToControlValue } from '../fx/control-value';
 import { Float2Value, Float2ValueT } from '../fx/float2value';
@@ -106,7 +107,7 @@ export class PresetEntryT {
 constructor(
   public name: string|Uint8Array|null = null,
   public valueType: ControlValue = ControlValue.NONE,
-  public value: ColorValueT|Float2ValueT|Float3ValueT|Float4ValueT|FloatValueT|IntValueT|MeshValueT|TextureValueT|UintValueT|null = null
+  public value: BoolValueT|ColorValueT|Float2ValueT|Float3ValueT|Float4ValueT|FloatValueT|IntValueT|MeshValueT|TextureValueT|UintValueT|null = null
 ){}
 
 

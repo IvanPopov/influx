@@ -2,6 +2,7 @@
 
 import * as flatbuffers from 'flatbuffers';
 
+import { BoolValue, BoolValueT } from '../fx/bool-value';
 import { FloatValue, FloatValueT } from '../fx/float-value';
 import { IntValue, IntValueT } from '../fx/int-value';
 import { PropertyValue, unionToPropertyValue, unionListToPropertyValue } from '../fx/property-value';
@@ -101,7 +102,7 @@ export class ViewTypePropertyT {
 constructor(
   public name: string|Uint8Array|null = null,
   public valueType: PropertyValue = PropertyValue.NONE,
-  public value: FloatValueT|IntValueT|StringValueT|UintValueT|null = null
+  public value: BoolValueT|FloatValueT|IntValueT|StringValueT|UintValueT|null = null
 ){}
 
 

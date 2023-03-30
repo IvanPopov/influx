@@ -6,4 +6,5 @@ export { Shader, unionToShader, unionListToShader } from './fx/shader';
 export { Technique11Bundle, Technique11BundleT } from './fx/technique11bundle';
 export { Technique11RenderPass, Technique11RenderPassT } from './fx/technique11render-pass';
 export { VertexShader, VertexShaderT } from './fx/vertex-shader';
+export { TextureBundle, TextureBundleT } from './texture-bundle';
 export { TypeLayout, TypeLayoutT } from './type-layout';

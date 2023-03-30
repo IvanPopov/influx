@@ -35,7 +35,7 @@ SamplerState MeshTextureSampler
 
 
 
-RenderTargetView g_Rtv0<string format="rgb8"; string texture="g_Tex0";>;
+RenderTargetView g_Rtv0<string format="rgba32"; string texture="g_Tex0";>;
 Texture2D g_Tex0;
 
 struct VS_OUTPUT

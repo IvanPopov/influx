@@ -25,7 +25,9 @@ const GlslTypeNames = {
     'float4': 'vec4',
     'float4x4': 'mat4',
     'float3x3': 'mat3x3',
-    'float3x4': 'mat3x4'
+    'float3x4': 'mat3x4',
+
+    'Texture2D': 'sampler2D'
 }
 
 // const HlslTypeNames = Object.fromEntries(Object.entries(GlslTypeNames).map(([k, v]) => [v, k]));
@@ -44,6 +46,7 @@ const sname = {
 const IS_POSITION = (semantic: string) => ['POSITION', 'SV_POSITION'].indexOf(semantic.toUpperCase()) !== -1;
 const IS_INSTANCEID = (semantic: string) => ['INSTANCE_ID', 'SV_INSTANCEID'].indexOf(semantic.toUpperCase()) !== -1;
 const IS_VERTEXID = (semantic: string) => ['VERTEX_ID', 'SV_VERTEXID'].indexOf(semantic.toUpperCase()) !== -1;
+const IS_SVPOSITION = (semantic: string) => ['SV_POSITION'].indexOf(semantic.toUpperCase()) !== -1;
 
 function determMostPreciseBaseType(left: ITypeInstruction, right: ITypeInstruction): ITypeInstruction {
     const length =
@@ -211,11 +214,11 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
         }
 
         // todo: add support not only for 2D textures
-        if (SystemScope.isTexture(type)) {
-            this.emitKeyword('sampler2D');
-            this.emitKeyword(src.name);
-            return;
-        }
+        // if (SystemScope.isTexture(type)) {
+        //     this.emitKeyword('sampler2D');
+        //     this.emitKeyword(src.name);
+        //     return;
+        // }
 
         super.emitVariableNoInit(ctx, src, rename);
     }
@@ -467,7 +470,7 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                 const id = callee as IIdExprInstruction;
                 this.emitGlobal(ctx, id.decl);
 
-                if (decl.name == 'Sample') {
+                if (decl.name == 'Sample' || decl.name == 'SampleBias') {
                     this.emitKeyword(`texture`);
                     this.emitChar('(');
                     this.emitNoSpace();
@@ -493,20 +496,32 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                     this.emitKeyword('int');
                     this.emitChar('(');
                     this.emitNoSpace();
-                    this.emitExpression(ctx, args[0]);
+
+                    let w: IExprInstruction, h: IExprInstruction;
+                    if (args.length == 3) {
+                        this.emitExpression(ctx, args[0]);
+                        w = args[1];
+                        h = args[2];
+                    } else {
+                        this.emitKeyword('0');
+                        w = args[0];
+                        h = args[1];
+                    }
+
+                    
                     this.emitChar(')');
                     this.emitChar(')');
                     this.emitChar(';');
                     this.emitNewline();
 
-                    this.emitExpression(ctx, args[1]);
+                    this.emitExpression(ctx, w);
                     this.emitSpace();
                     this.emitChar(`=`);
                     this.emitKeyword('uint(temp.x)');
                     this.emitChar(';');
                     this.emitNewline();
 
-                    this.emitExpression(ctx, args[2]);
+                    this.emitExpression(ctx, h);
                     this.emitSpace();
                     this.emitChar(`=`);
                     this.emitKeyword('uint(temp.y)');
@@ -621,7 +636,11 @@ export class GLSLEmitter<ContextT extends GLSLContext> extends CodeEmitter<Conte
                                 this.emitKeyword('uint(gl_InstanceID)');
                             } else if (IS_VERTEXID(decl.semantic)) {
                                 this.emitKeyword('uint(gl_VertexID)');
-                            } else {
+                            } 
+                            else if (IS_SVPOSITION(decl.semantic)) {
+                                this.emitKeyword('gl_FragCoord');
+                            } 
+                            else {
                                 this.emitKeyword(this.attr(ctx, decl));
                             }
                             this.emitChar(';');

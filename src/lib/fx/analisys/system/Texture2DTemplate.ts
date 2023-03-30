@@ -129,6 +129,43 @@ class Texture2DTemplate extends TypeTemplate {
             methods.push(func);
         }
 
+        {
+            const paramList = [];
+
+            {
+                let samplerState = scope.findType("SamplerState");
+                const type = new VariableTypeInstruction({ type: samplerState, scope });
+                const id = new IdInstruction({ scope, name: 'samplerState' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f2 = scope.findType("float2");
+                const type = new VariableTypeInstruction({ type: f2, scope });
+                const id = new IdInstruction({ scope, name: 'uv' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let f1 = scope.findType("float");
+                const type = new VariableTypeInstruction({ type: f1, scope });
+                const id = new IdInstruction({ scope, name: 'bias' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            let returnType = new VariableTypeInstruction({ type, scope });
+            let id = new IdInstruction({ scope, name: 'SampleBias' });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: true, vertex: true });
+            methods.push(func);
+        }
+
 
         {
             const paramList = [];
@@ -204,6 +241,34 @@ class Texture2DTemplate extends TypeTemplate {
                 const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
                 const param2 = new VariableDeclInstruction({ scope, type, id, usageFlags });
                 paramList.push(param2);
+            }
+
+            let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });
+            let id = new IdInstruction({ scope, name: 'GetDimensions' });
+            let def = new FunctionDefInstruction({ scope, returnType, id, paramList });
+            let func = new SystemFunctionInstruction({ scope, def, pixel: false, vertex: false });
+            methods.push(func);
+        }
+
+        {
+            const paramList = [];
+            
+            {
+                let uint = scope.findType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'width' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param0 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param0);
+            }
+
+            {
+                let uint = scope.findType("uint");
+                const type = new VariableTypeInstruction({ type: uint, scope, usages: ['out'] });
+                const id = new IdInstruction({ scope, name: 'height' });
+                const usageFlags = EVariableUsageFlags.k_Argument | EVariableUsageFlags.k_Local;
+                const param1 = new VariableDeclInstruction({ scope, type, id, usageFlags });
+                paramList.push(param1);
             }
 
             let returnType = new VariableTypeInstruction({ type: scope.findType("void"), scope });

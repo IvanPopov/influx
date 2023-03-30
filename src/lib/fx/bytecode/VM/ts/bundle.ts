@@ -487,7 +487,7 @@ export class TSBundle implements Bundle.IBundle {
 
     setConstant(name: string, value: Uint8Array): boolean {
         const layout = this.layout;
-        const reflection = layout.find(entry => entry.name === name);
+        const reflection = layout.find(entry => entry.name === name || entry.semantic === name);
         const constants = this.inputs[CBUFFER0_REGISTER];
 
         if (!reflection) {
@@ -798,7 +798,7 @@ export function decodeRenderTargetViews(rtvsChunk: Uint8Array): Bundle.IRenderTa
         const texture = String.fromCharCode(...rtvsChunk.subarray(readed, readed + textureLength));
         readed += textureLength;
         const format = <ERenderTargetFormats>u8ArrayToI32(rtvsChunk.subarray(readed, readed + 4));
-
+        readed += 4;
         rtvs.push({ name, texture, format });
     }
     return rtvs;

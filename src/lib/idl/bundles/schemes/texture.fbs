@@ -1,0 +1,9 @@
+include "type.fbs";
+
+table TextureBundle 
+{
+    name: string;
+    slot: uint;
+    stride: uint;
+    type: TypeLayout;
+}

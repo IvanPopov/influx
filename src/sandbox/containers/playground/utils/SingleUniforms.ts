@@ -1,14 +1,15 @@
 import { ITimeline } from "@lib/fx/timeline";
 import { IMap } from "@lib/idl/IMap";
+import { ITexture } from "@lib/idl/ITechnique";
 import { IPlaygroundControlsState } from "@sandbox/store/IStoreState";
 import * as THREE from 'three';
 import { controlValueToThreeValue } from "./controls";
 import { IResourceDependencies } from "./deps";
 
-type IUniform = THREE.IUniform<THREE.Texture | THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number>;
+type IUniform = THREE.IUniform<THREE.Texture | THREE.Vector4 | THREE.Vector3 | THREE.Vector2 | Number | Boolean>;
 
 export class SingleUniforms {
-    static create(controls: IPlaygroundControlsState, deps: IResourceDependencies): IMap<THREE.IUniform> {
+    static create(controls: IPlaygroundControlsState, deps: IResourceDependencies, textures?: ITexture[]): IMap<THREE.IUniform> {
         const uniforms: IMap<IUniform> = {
             elapsedTime: { value: 0 },
             elapsedTimeLevel: { value: 0 },
@@ -20,6 +21,12 @@ export class SingleUniforms {
                 let value = controls.values[name];
                 let ctrl = controls.controls[name];
                 uniforms[name] = { value: controlValueToThreeValue(value, ctrl.type, deps) };
+            }
+        }
+
+        if (textures) {
+            for (let tex of textures) {
+                uniforms[tex.name] = { value: null };
             }
         }
 
@@ -45,6 +52,7 @@ export class SingleUniforms {
             for (const name in dynamicTextures) {
                 const value = dynamicTextures[name];
                 uniforms[name] ||= { value };
+                uniforms[name].value = value;
             }
         }
     }

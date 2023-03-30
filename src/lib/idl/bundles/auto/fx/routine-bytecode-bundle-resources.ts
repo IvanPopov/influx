@@ -2,10 +2,10 @@
 
 import * as flatbuffers from 'flatbuffers';
 
-import { BufferBundle, BufferBundleT } from '../fx/buffer-bundle';
-import { TextureBundle, TextureBundleT } from '../fx/texture-bundle';
+import { BufferBundle, BufferBundleT } from '../buffer-bundle';
 import { TrimeshBundle, TrimeshBundleT } from '../fx/trimesh-bundle';
-import { UAVBundle, UAVBundleT } from '../fx/uavbundle';
+import { TextureBundle, TextureBundleT } from '../texture-bundle';
+import { UAVBundle, UAVBundleT } from '../uavbundle';
 
 
 export class RoutineBytecodeBundleResources {

@@ -133,10 +133,11 @@ public class BundleContentUnion {
 public enum PropertyValue : byte
 {
   NONE = 0,
-  UintValue = 1,
-  IntValue = 2,
-  FloatValue = 3,
-  StringValue = 4,
+  BoolValue = 1,
+  UintValue = 2,
+  IntValue = 3,
+  FloatValue = 4,
+  StringValue = 5,
 };
 
 public class PropertyValueUnion {
@@ -149,6 +150,8 @@ public class PropertyValueUnion {
   }
 
   public T As<T>() where T : class { return this.Value as T; }
+  public Fx.BoolValueT AsBoolValue() { return this.As<Fx.BoolValueT>(); }
+  public static PropertyValueUnion FromBoolValue(Fx.BoolValueT _boolvalue) { return new PropertyValueUnion{ Type = PropertyValue.BoolValue, Value = _boolvalue }; }
   public Fx.UintValueT AsUintValue() { return this.As<Fx.UintValueT>(); }
   public static PropertyValueUnion FromUintValue(Fx.UintValueT _uintvalue) { return new PropertyValueUnion{ Type = PropertyValue.UintValue, Value = _uintvalue }; }
   public Fx.IntValueT AsIntValue() { return this.As<Fx.IntValueT>(); }
@@ -161,6 +164,7 @@ public class PropertyValueUnion {
   public static int Pack(FlatBuffers.FlatBufferBuilder builder, PropertyValueUnion _o) {
     switch (_o.Type) {
       default: return 0;
+      case PropertyValue.BoolValue: return Fx.BoolValue.Pack(builder, _o.AsBoolValue()).Value;
       case PropertyValue.UintValue: return Fx.UintValue.Pack(builder, _o.AsUintValue()).Value;
       case PropertyValue.IntValue: return Fx.IntValue.Pack(builder, _o.AsIntValue()).Value;
       case PropertyValue.FloatValue: return Fx.FloatValue.Pack(builder, _o.AsFloatValue()).Value;
@@ -172,15 +176,16 @@ public class PropertyValueUnion {
 public enum ControlValue : byte
 {
   NONE = 0,
-  UintValue = 1,
-  IntValue = 2,
-  FloatValue = 3,
-  Float2Value = 4,
-  Float3Value = 5,
-  Float4Value = 6,
-  ColorValue = 7,
-  TextureValue = 8,
-  MeshValue = 9,
+  BoolValue = 1,
+  UintValue = 2,
+  IntValue = 3,
+  FloatValue = 4,
+  Float2Value = 5,
+  Float3Value = 6,
+  Float4Value = 7,
+  ColorValue = 8,
+  TextureValue = 9,
+  MeshValue = 10,
 };
 
 public class ControlValueUnion {
@@ -193,6 +198,8 @@ public class ControlValueUnion {
   }
 
   public T As<T>() where T : class { return this.Value as T; }
+  public Fx.BoolValueT AsBoolValue() { return this.As<Fx.BoolValueT>(); }
+  public static ControlValueUnion FromBoolValue(Fx.BoolValueT _boolvalue) { return new ControlValueUnion{ Type = ControlValue.BoolValue, Value = _boolvalue }; }
   public Fx.UintValueT AsUintValue() { return this.As<Fx.UintValueT>(); }
   public static ControlValueUnion FromUintValue(Fx.UintValueT _uintvalue) { return new ControlValueUnion{ Type = ControlValue.UintValue, Value = _uintvalue }; }
   public Fx.IntValueT AsIntValue() { return this.As<Fx.IntValueT>(); }
@@ -215,6 +222,7 @@ public class ControlValueUnion {
   public static int Pack(FlatBuffers.FlatBufferBuilder builder, ControlValueUnion _o) {
     switch (_o.Type) {
       default: return 0;
+      case ControlValue.BoolValue: return Fx.BoolValue.Pack(builder, _o.AsBoolValue()).Value;
       case ControlValue.UintValue: return Fx.UintValue.Pack(builder, _o.AsUintValue()).Value;
       case ControlValue.IntValue: return Fx.IntValue.Pack(builder, _o.AsIntValue()).Value;
       case ControlValue.FloatValue: return Fx.FloatValue.Pack(builder, _o.AsFloatValue()).Value;
@@ -414,252 +422,6 @@ public class BundleMetaT
   public BundleMetaT() {
     this.Author = null;
     this.Source = null;
-  }
-}
-
-public struct UAVBundle : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static UAVBundle GetRootAsUAVBundle(ByteBuffer _bb) { return GetRootAsUAVBundle(_bb, new UAVBundle()); }
-  public static UAVBundle GetRootAsUAVBundle(ByteBuffer _bb, UAVBundle obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public UAVBundle __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public string Name { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(4, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(4); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
-  public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
-
-  public static Offset<Fx.UAVBundle> CreateUAVBundle(FlatBufferBuilder builder,
-      StringOffset nameOffset = default(StringOffset),
-      uint slot = 0,
-      uint stride = 0,
-      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
-    builder.StartTable(4);
-    UAVBundle.AddType(builder, typeOffset);
-    UAVBundle.AddStride(builder, stride);
-    UAVBundle.AddSlot(builder, slot);
-    UAVBundle.AddName(builder, nameOffset);
-    return UAVBundle.EndUAVBundle(builder);
-  }
-
-  public static void StartUAVBundle(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
-  public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
-  public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
-  public static Offset<Fx.UAVBundle> EndUAVBundle(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.UAVBundle>(o);
-  }
-  public UAVBundleT UnPack() {
-    var _o = new UAVBundleT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(UAVBundleT _o) {
-    _o.Name = this.Name;
-    _o.Slot = this.Slot;
-    _o.Stride = this.Stride;
-    _o.Type = this.Type.HasValue ? this.Type.Value.UnPack() : null;
-  }
-  public static Offset<Fx.UAVBundle> Pack(FlatBufferBuilder builder, UAVBundleT _o) {
-    if (_o == null) return default(Offset<Fx.UAVBundle>);
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
-    return CreateUAVBundle(
-      builder,
-      _name,
-      _o.Slot,
-      _o.Stride,
-      _type);
-  }
-}
-
-public class UAVBundleT
-{
-  public string Name { get; set; }
-  public uint Slot { get; set; }
-  public uint Stride { get; set; }
-  public TypeLayoutT Type { get; set; }
-
-  public UAVBundleT() {
-    this.Name = null;
-    this.Slot = 0;
-    this.Stride = 0;
-    this.Type = null;
-  }
-}
-
-public struct BufferBundle : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static BufferBundle GetRootAsBufferBundle(ByteBuffer _bb) { return GetRootAsBufferBundle(_bb, new BufferBundle()); }
-  public static BufferBundle GetRootAsBufferBundle(ByteBuffer _bb, BufferBundle obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public BufferBundle __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public string Name { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(4, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(4); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
-  public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
-
-  public static Offset<Fx.BufferBundle> CreateBufferBundle(FlatBufferBuilder builder,
-      StringOffset nameOffset = default(StringOffset),
-      uint slot = 0,
-      uint stride = 0,
-      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
-    builder.StartTable(4);
-    BufferBundle.AddType(builder, typeOffset);
-    BufferBundle.AddStride(builder, stride);
-    BufferBundle.AddSlot(builder, slot);
-    BufferBundle.AddName(builder, nameOffset);
-    return BufferBundle.EndBufferBundle(builder);
-  }
-
-  public static void StartBufferBundle(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
-  public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
-  public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
-  public static Offset<Fx.BufferBundle> EndBufferBundle(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.BufferBundle>(o);
-  }
-  public BufferBundleT UnPack() {
-    var _o = new BufferBundleT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(BufferBundleT _o) {
-    _o.Name = this.Name;
-    _o.Slot = this.Slot;
-    _o.Stride = this.Stride;
-    _o.Type = this.Type.HasValue ? this.Type.Value.UnPack() : null;
-  }
-  public static Offset<Fx.BufferBundle> Pack(FlatBufferBuilder builder, BufferBundleT _o) {
-    if (_o == null) return default(Offset<Fx.BufferBundle>);
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
-    return CreateBufferBundle(
-      builder,
-      _name,
-      _o.Slot,
-      _o.Stride,
-      _type);
-  }
-}
-
-public class BufferBundleT
-{
-  public string Name { get; set; }
-  public uint Slot { get; set; }
-  public uint Stride { get; set; }
-  public TypeLayoutT Type { get; set; }
-
-  public BufferBundleT() {
-    this.Name = null;
-    this.Slot = 0;
-    this.Stride = 0;
-    this.Type = null;
-  }
-}
-
-public struct TextureBundle : IFlatbufferObject
-{
-  private Table __p;
-  public ByteBuffer ByteBuffer { get { return __p.bb; } }
-  public static void ValidateVersion() { FlatBufferConstants.FLATBUFFERS_2_0_0(); }
-  public static TextureBundle GetRootAsTextureBundle(ByteBuffer _bb) { return GetRootAsTextureBundle(_bb, new TextureBundle()); }
-  public static TextureBundle GetRootAsTextureBundle(ByteBuffer _bb, TextureBundle obj) { return (obj.__assign(_bb.GetInt(_bb.Position) + _bb.Position, _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
-  public TextureBundle __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
-
-  public string Name { get { int o = __p.__offset(4); return o != 0 ? __p.__string(o + __p.bb_pos) : null; } }
-#if ENABLE_SPAN_T
-  public Span<byte> GetNameBytes() { return __p.__vector_as_span<byte>(4, 1); }
-#else
-  public ArraySegment<byte>? GetNameBytes() { return __p.__vector_as_arraysegment(4); }
-#endif
-  public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
-  public uint Slot { get { int o = __p.__offset(6); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public uint Stride { get { int o = __p.__offset(8); return o != 0 ? __p.bb.GetUint(o + __p.bb_pos) : (uint)0; } }
-  public TypeLayout? Type { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
-
-  public static Offset<Fx.TextureBundle> CreateTextureBundle(FlatBufferBuilder builder,
-      StringOffset nameOffset = default(StringOffset),
-      uint slot = 0,
-      uint stride = 0,
-      Offset<TypeLayout> typeOffset = default(Offset<TypeLayout>)) {
-    builder.StartTable(4);
-    TextureBundle.AddType(builder, typeOffset);
-    TextureBundle.AddStride(builder, stride);
-    TextureBundle.AddSlot(builder, slot);
-    TextureBundle.AddName(builder, nameOffset);
-    return TextureBundle.EndTextureBundle(builder);
-  }
-
-  public static void StartTextureBundle(FlatBufferBuilder builder) { builder.StartTable(4); }
-  public static void AddName(FlatBufferBuilder builder, StringOffset nameOffset) { builder.AddOffset(0, nameOffset.Value, 0); }
-  public static void AddSlot(FlatBufferBuilder builder, uint slot) { builder.AddUint(1, slot, 0); }
-  public static void AddStride(FlatBufferBuilder builder, uint stride) { builder.AddUint(2, stride, 0); }
-  public static void AddType(FlatBufferBuilder builder, Offset<TypeLayout> typeOffset) { builder.AddOffset(3, typeOffset.Value, 0); }
-  public static Offset<Fx.TextureBundle> EndTextureBundle(FlatBufferBuilder builder) {
-    int o = builder.EndTable();
-    return new Offset<Fx.TextureBundle>(o);
-  }
-  public TextureBundleT UnPack() {
-    var _o = new TextureBundleT();
-    this.UnPackTo(_o);
-    return _o;
-  }
-  public void UnPackTo(TextureBundleT _o) {
-    _o.Name = this.Name;
-    _o.Slot = this.Slot;
-    _o.Stride = this.Stride;
-    _o.Type = this.Type.HasValue ? this.Type.Value.UnPack() : null;
-  }
-  public static Offset<Fx.TextureBundle> Pack(FlatBufferBuilder builder, TextureBundleT _o) {
-    if (_o == null) return default(Offset<Fx.TextureBundle>);
-    var _name = _o.Name == null ? default(StringOffset) : builder.CreateString(_o.Name);
-    var _type = _o.Type == null ? default(Offset<TypeLayout>) : TypeLayout.Pack(builder, _o.Type);
-    return CreateTextureBundle(
-      builder,
-      _name,
-      _o.Slot,
-      _o.Stride,
-      _type);
-  }
-}
-
-public class TextureBundleT
-{
-  public string Name { get; set; }
-  public uint Slot { get; set; }
-  public uint Stride { get; set; }
-  public TypeLayoutT Type { get; set; }
-
-  public TextureBundleT() {
-    this.Name = null;
-    this.Slot = 0;
-    this.Stride = 0;
-    this.Type = null;
   }
 }
 
@@ -893,11 +655,11 @@ public struct RoutineBytecodeBundleResources : IFlatbufferObject
   public void __init(int _i, ByteBuffer _bb) { __p = new Table(_i, _bb); }
   public RoutineBytecodeBundleResources __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
-  public Fx.UAVBundle? Uavs(int j) { int o = __p.__offset(4); return o != 0 ? (Fx.UAVBundle?)(new Fx.UAVBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public UAVBundle? Uavs(int j) { int o = __p.__offset(4); return o != 0 ? (UAVBundle?)(new UAVBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int UavsLength { get { int o = __p.__offset(4); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public Fx.BufferBundle? Buffers(int j) { int o = __p.__offset(6); return o != 0 ? (Fx.BufferBundle?)(new Fx.BufferBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public BufferBundle? Buffers(int j) { int o = __p.__offset(6); return o != 0 ? (BufferBundle?)(new BufferBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int BuffersLength { get { int o = __p.__offset(6); return o != 0 ? __p.__vector_len(o) : 0; } }
-  public Fx.TextureBundle? Textures(int j) { int o = __p.__offset(8); return o != 0 ? (Fx.TextureBundle?)(new Fx.TextureBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public TextureBundle? Textures(int j) { int o = __p.__offset(8); return o != 0 ? (TextureBundle?)(new TextureBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int TexturesLength { get { int o = __p.__offset(8); return o != 0 ? __p.__vector_len(o) : 0; } }
   public Fx.TrimeshBundle? Trimeshes(int j) { int o = __p.__offset(10); return o != 0 ? (Fx.TrimeshBundle?)(new Fx.TrimeshBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int TrimeshesLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
@@ -917,22 +679,22 @@ public struct RoutineBytecodeBundleResources : IFlatbufferObject
 
   public static void StartRoutineBytecodeBundleResources(FlatBufferBuilder builder) { builder.StartTable(4); }
   public static void AddUavs(FlatBufferBuilder builder, VectorOffset uavsOffset) { builder.AddOffset(0, uavsOffset.Value, 0); }
-  public static VectorOffset CreateUavsVector(FlatBufferBuilder builder, Offset<Fx.UAVBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, Offset<Fx.UAVBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.UAVBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.UAVBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static VectorOffset CreateUavsVector(FlatBufferBuilder builder, Offset<UAVBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, Offset<UAVBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<UAVBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateUavsVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<UAVBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartUavsVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static void AddBuffers(FlatBufferBuilder builder, VectorOffset buffersOffset) { builder.AddOffset(1, buffersOffset.Value, 0); }
-  public static VectorOffset CreateBuffersVector(FlatBufferBuilder builder, Offset<Fx.BufferBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, Offset<Fx.BufferBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.BufferBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.BufferBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static VectorOffset CreateBuffersVector(FlatBufferBuilder builder, Offset<BufferBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, Offset<BufferBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<BufferBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateBuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<BufferBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartBuffersVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static void AddTextures(FlatBufferBuilder builder, VectorOffset texturesOffset) { builder.AddOffset(2, texturesOffset.Value, 0); }
-  public static VectorOffset CreateTexturesVector(FlatBufferBuilder builder, Offset<Fx.TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
-  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, Offset<Fx.TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<Fx.TextureBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
-  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<Fx.TextureBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVector(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<TextureBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<TextureBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartTexturesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static void AddTrimeshes(FlatBufferBuilder builder, VectorOffset trimeshesOffset) { builder.AddOffset(3, trimeshesOffset.Value, 0); }
   public static VectorOffset CreateTrimeshesVector(FlatBufferBuilder builder, Offset<Fx.TrimeshBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
@@ -950,11 +712,11 @@ public struct RoutineBytecodeBundleResources : IFlatbufferObject
     return _o;
   }
   public void UnPackTo(RoutineBytecodeBundleResourcesT _o) {
-    _o.Uavs = new List<Fx.UAVBundleT>();
+    _o.Uavs = new List<UAVBundleT>();
     for (var _j = 0; _j < this.UavsLength; ++_j) {_o.Uavs.Add(this.Uavs(_j).HasValue ? this.Uavs(_j).Value.UnPack() : null);}
-    _o.Buffers = new List<Fx.BufferBundleT>();
+    _o.Buffers = new List<BufferBundleT>();
     for (var _j = 0; _j < this.BuffersLength; ++_j) {_o.Buffers.Add(this.Buffers(_j).HasValue ? this.Buffers(_j).Value.UnPack() : null);}
-    _o.Textures = new List<Fx.TextureBundleT>();
+    _o.Textures = new List<TextureBundleT>();
     for (var _j = 0; _j < this.TexturesLength; ++_j) {_o.Textures.Add(this.Textures(_j).HasValue ? this.Textures(_j).Value.UnPack() : null);}
     _o.Trimeshes = new List<Fx.TrimeshBundleT>();
     for (var _j = 0; _j < this.TrimeshesLength; ++_j) {_o.Trimeshes.Add(this.Trimeshes(_j).HasValue ? this.Trimeshes(_j).Value.UnPack() : null);}
@@ -963,20 +725,20 @@ public struct RoutineBytecodeBundleResources : IFlatbufferObject
     if (_o == null) return default(Offset<Fx.RoutineBytecodeBundleResources>);
     var _uavs = default(VectorOffset);
     if (_o.Uavs != null) {
-      var __uavs = new Offset<Fx.UAVBundle>[_o.Uavs.Count];
-      for (var _j = 0; _j < __uavs.Length; ++_j) { __uavs[_j] = Fx.UAVBundle.Pack(builder, _o.Uavs[_j]); }
+      var __uavs = new Offset<UAVBundle>[_o.Uavs.Count];
+      for (var _j = 0; _j < __uavs.Length; ++_j) { __uavs[_j] = UAVBundle.Pack(builder, _o.Uavs[_j]); }
       _uavs = CreateUavsVector(builder, __uavs);
     }
     var _buffers = default(VectorOffset);
     if (_o.Buffers != null) {
-      var __buffers = new Offset<Fx.BufferBundle>[_o.Buffers.Count];
-      for (var _j = 0; _j < __buffers.Length; ++_j) { __buffers[_j] = Fx.BufferBundle.Pack(builder, _o.Buffers[_j]); }
+      var __buffers = new Offset<BufferBundle>[_o.Buffers.Count];
+      for (var _j = 0; _j < __buffers.Length; ++_j) { __buffers[_j] = BufferBundle.Pack(builder, _o.Buffers[_j]); }
       _buffers = CreateBuffersVector(builder, __buffers);
     }
     var _textures = default(VectorOffset);
     if (_o.Textures != null) {
-      var __textures = new Offset<Fx.TextureBundle>[_o.Textures.Count];
-      for (var _j = 0; _j < __textures.Length; ++_j) { __textures[_j] = Fx.TextureBundle.Pack(builder, _o.Textures[_j]); }
+      var __textures = new Offset<TextureBundle>[_o.Textures.Count];
+      for (var _j = 0; _j < __textures.Length; ++_j) { __textures[_j] = TextureBundle.Pack(builder, _o.Textures[_j]); }
       _textures = CreateTexturesVector(builder, __textures);
     }
     var _trimeshes = default(VectorOffset);
@@ -996,9 +758,9 @@ public struct RoutineBytecodeBundleResources : IFlatbufferObject
 
 public class RoutineBytecodeBundleResourcesT
 {
-  public List<Fx.UAVBundleT> Uavs { get; set; }
-  public List<Fx.BufferBundleT> Buffers { get; set; }
-  public List<Fx.TextureBundleT> Textures { get; set; }
+  public List<UAVBundleT> Uavs { get; set; }
+  public List<BufferBundleT> Buffers { get; set; }
+  public List<TextureBundleT> Textures { get; set; }
   public List<Fx.TrimeshBundleT> Trimeshes { get; set; }
 
   public RoutineBytecodeBundleResourcesT() {
@@ -2244,6 +2006,45 @@ public class UintValueT
   }
 }
 
+public struct BoolValue : IFlatbufferObject
+{
+  private Struct __p;
+  public ByteBuffer ByteBuffer { get { return __p.bb; } }
+  public void __init(int _i, ByteBuffer _bb) { __p = new Struct(_i, _bb); }
+  public BoolValue __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+
+  public bool Value { get { return 0!=__p.bb.Get(__p.bb_pos + 0); } }
+
+  public static Offset<Fx.BoolValue> CreateBoolValue(FlatBufferBuilder builder, bool Value) {
+    builder.Prep(1, 1);
+    builder.PutBool(Value);
+    return new Offset<Fx.BoolValue>(builder.Offset);
+  }
+  public BoolValueT UnPack() {
+    var _o = new BoolValueT();
+    this.UnPackTo(_o);
+    return _o;
+  }
+  public void UnPackTo(BoolValueT _o) {
+    _o.Value = this.Value;
+  }
+  public static Offset<Fx.BoolValue> Pack(FlatBufferBuilder builder, BoolValueT _o) {
+    if (_o == null) return default(Offset<Fx.BoolValue>);
+    return CreateBoolValue(
+      builder,
+      _o.Value);
+  }
+}
+
+public class BoolValueT
+{
+  public bool Value { get; set; }
+
+  public BoolValueT() {
+    this.Value = false;
+  }
+}
+
 public struct IntValue : IFlatbufferObject
 {
   private Struct __p;
@@ -2551,6 +2352,7 @@ public struct ViewTypeProperty : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public Fx.PropertyValue ValueType { get { int o = __p.__offset(6); return o != 0 ? (Fx.PropertyValue)__p.bb.Get(o + __p.bb_pos) : Fx.PropertyValue.NONE; } }
   public TTable? Value<TTable>() where TTable : struct, IFlatbufferObject { int o = __p.__offset(8); return o != 0 ? (TTable?)__p.__union<TTable>(o + __p.bb_pos) : null; }
+  public Fx.BoolValue ValueAsBoolValue() { return Value<Fx.BoolValue>().Value; }
   public Fx.UintValue ValueAsUintValue() { return Value<Fx.UintValue>().Value; }
   public Fx.IntValue ValueAsIntValue() { return Value<Fx.IntValue>().Value; }
   public Fx.FloatValue ValueAsFloatValue() { return Value<Fx.FloatValue>().Value; }
@@ -2586,6 +2388,9 @@ public struct ViewTypeProperty : IFlatbufferObject
     _o.Value.Type = this.ValueType;
     switch (this.ValueType) {
       default: break;
+      case Fx.PropertyValue.BoolValue:
+        _o.Value.Value = this.Value<Fx.BoolValue>().HasValue ? this.Value<Fx.BoolValue>().Value.UnPack() : null;
+        break;
       case Fx.PropertyValue.UintValue:
         _o.Value.Value = this.Value<Fx.UintValue>().HasValue ? this.Value<Fx.UintValue>().Value.UnPack() : null;
         break;
@@ -2643,6 +2448,7 @@ public struct UIControl : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public Fx.ControlValue ValueType { get { int o = __p.__offset(6); return o != 0 ? (Fx.ControlValue)__p.bb.Get(o + __p.bb_pos) : Fx.ControlValue.NONE; } }
   public TTable? Value<TTable>() where TTable : struct, IFlatbufferObject { int o = __p.__offset(8); return o != 0 ? (TTable?)__p.__union<TTable>(o + __p.bb_pos) : null; }
+  public Fx.BoolValue ValueAsBoolValue() { return Value<Fx.BoolValue>().Value; }
   public Fx.UintValue ValueAsUintValue() { return Value<Fx.UintValue>().Value; }
   public Fx.IntValue ValueAsIntValue() { return Value<Fx.IntValue>().Value; }
   public Fx.FloatValue ValueAsFloatValue() { return Value<Fx.FloatValue>().Value; }
@@ -2693,6 +2499,9 @@ public struct UIControl : IFlatbufferObject
     _o.Value.Type = this.ValueType;
     switch (this.ValueType) {
       default: break;
+      case Fx.ControlValue.BoolValue:
+        _o.Value.Value = this.Value<Fx.BoolValue>().HasValue ? this.Value<Fx.BoolValue>().Value.UnPack() : null;
+        break;
       case Fx.ControlValue.UintValue:
         _o.Value.Value = this.Value<Fx.UintValue>().HasValue ? this.Value<Fx.UintValue>().Value.UnPack() : null;
         break;
@@ -2776,6 +2585,7 @@ public struct PresetEntry : IFlatbufferObject
   public byte[] GetNameArray() { return __p.__vector_as_array<byte>(4); }
   public Fx.ControlValue ValueType { get { int o = __p.__offset(6); return o != 0 ? (Fx.ControlValue)__p.bb.Get(o + __p.bb_pos) : Fx.ControlValue.NONE; } }
   public TTable? Value<TTable>() where TTable : struct, IFlatbufferObject { int o = __p.__offset(8); return o != 0 ? (TTable?)__p.__union<TTable>(o + __p.bb_pos) : null; }
+  public Fx.BoolValue ValueAsBoolValue() { return Value<Fx.BoolValue>().Value; }
   public Fx.UintValue ValueAsUintValue() { return Value<Fx.UintValue>().Value; }
   public Fx.IntValue ValueAsIntValue() { return Value<Fx.IntValue>().Value; }
   public Fx.FloatValue ValueAsFloatValue() { return Value<Fx.FloatValue>().Value; }
@@ -2816,6 +2626,9 @@ public struct PresetEntry : IFlatbufferObject
     _o.Value.Type = this.ValueType;
     switch (this.ValueType) {
       default: break;
+      case Fx.ControlValue.BoolValue:
+        _o.Value.Value = this.Value<Fx.BoolValue>().HasValue ? this.Value<Fx.BoolValue>().Value.UnPack() : null;
+        break;
       case Fx.ControlValue.UintValue:
         _o.Value.Value = this.Value<Fx.UintValue>().HasValue ? this.Value<Fx.UintValue>().Value.UnPack() : null;
         break;

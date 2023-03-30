@@ -1,4 +1,5 @@
 import { assert, isDefAndNotNull } from '@lib/common';
+import { i32ToU8Array } from '@lib/fx/bytecode/common';
 import { createSLDocument } from '@lib/fx/SLDocument';
 import { createTextDocument } from '@lib/fx/TextDocument';
 import { ITimeline } from '@lib/fx/timeline';
@@ -6,10 +7,9 @@ import { CodeContextMode } from '@lib/fx/translators/CodeEmitter';
 import { GLSLContext, GLSLEmitter } from '@lib/fx/translators/GlslEmitter';
 import { EComparisonFunc, EDepthWriteMask, IDepthStencilState, IShader } from '@lib/idl/bytecode';
 import { IDepthStencilView } from '@lib/idl/bytecode/IDepthStencilView';
-import { IRenderTargetView } from '@lib/idl/bytecode/IRenderTargetView';
+import { ERenderTargetFormats, IRenderTargetView } from '@lib/idl/bytecode/IRenderTargetView';
 import { IMap } from '@lib/idl/IMap';
 import { ITechnique11, ITechnique11RenderPass } from '@lib/idl/ITechnique11';
-import { EUsage, IConstantBuffer } from "@lib/idl/ITechnique9";
 import { crc32 } from '@lib/util/crc32';
 import { ASSETS_PATH } from '@sandbox/logic/common';
 import { IPlaygroundControlsState } from '@sandbox/store/IStoreState';
@@ -19,9 +19,10 @@ import { Progress } from 'semantic-ui-react';
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import HDRScene from './HDRScene';
+import * as GLSL from './shaders/fx';
 import { IThreeSceneState, ITreeSceneProps } from './ThreeScene';
 import { ResourceDependencies } from './utils/deps';
-import { GroupedUniforms, IViewport } from './utils/GroupedUniforms';
+import { div2Viewport, GroupedUniforms, IViewport } from './utils/GroupedUniforms';
 import { GuiView } from './utils/gui';
 import { SingleUniforms } from './utils/SingleUniforms';
 
@@ -29,7 +30,12 @@ import { createDepthStencilState } from '@lib/fx/bytecode/PipelineStates';
 import { CBBundleT } from '@lib/idl/bundles/auto/cbbundle';
 import { PixelShaderT } from '@lib/idl/bundles/auto/fx/pixel-shader';
 import { VertexShaderT } from '@lib/idl/bundles/auto/fx/vertex-shader';
+import { TextureBundleT } from '@lib/idl/bundles/auto/texture-bundle';
+import { EUsage, IConstantBuffer, ITexture } from '@lib/idl/ITechnique';
+import { Uniforms } from '@lib/idl/Uniforms';
+import UniformHelper from '@lib/fx/UniformHelper';
 
+const Shaders = (id: string) => GLSL[id];
 
 const STATS_CSS_PROPS: React.CSSProperties = {
     position: 'absolute',
@@ -62,6 +68,33 @@ interface IState extends IThreeSceneState {
 }
 
 
+// track all infly RTs in order to not interfer with them while reading texture
+class ActiveRTs {
+    activeRTs: Record<string, IRenderTargetView> = {};
+
+    // reset active list on this frame
+    reset () {
+        this.activeRTs = {};
+    }
+
+    // add active RT on this frame
+    add(rtv) {
+        if (rtv) {
+            this.activeRTs[rtv.name] = rtv;
+        }
+    }
+
+    // unbind all texture linked with active RTs
+    unbindTextures(graphicsPso: GraphicsPipelineStateObject) {
+        for (let rtName in this.activeRTs) {
+            const texUniform = graphicsPso.uniforms[this.activeRTs[rtName].texture];
+            if (texUniform) {
+                texUniform.value = null;
+            }
+        }
+    }
+}
+
 
 class ShaderDesc {
     // source code precomputed crc32
@@ -69,11 +102,10 @@ class ShaderDesc {
 }
 
 
-
 class GraphicsPipelineStateDesc {
     vs = new ShaderDesc(null, 0);
     ps = new ShaderDesc(null, 0);
-    depthStencilState: IDepthStencilState = createDepthStencilState();
+    depthStencilState: IDepthStencilState = GraphicsPipelineStateDesc.DEPTH_STENCIL_STATE_DEFAULT;
     rtv: IRenderTargetView = null;
 
 
@@ -91,9 +123,14 @@ class GraphicsPipelineStateDesc {
             `${dss?.DepthEnable}:${dss?.DepthFunc}:${dss?.DepthWriteMask}`
         );
     }
+
+    static DEPTH_STENCIL_STATE_DEFAULT = createDepthStencilState();
 }
 
 
+function rt2Viewport({ width, height }: THREE.WebGLRenderTarget): IViewport {
+    return { width, height };
+}
 
 
 const scanCbuffer = (sharedCbufs: IMap<IConstantBuffer>, bundleCbs: CBBundleT[], usage: EUsage) => {
@@ -118,8 +155,25 @@ const scanCbuffer = (sharedCbufs: IMap<IConstantBuffer>, bundleCbs: CBBundleT[],
 };
 
 
+const scanTexture = (sharedTextures: IMap<ITexture>, bundleTextures: TextureBundleT[], usage: EUsage) => {
+    for (let { name, slot } of bundleTextures) {
+        // skip same name buffers
+        const tex = sharedTextures[`${name}`] ||= {
+            name: `${name}`,
+            slot,
+            usage,
+        };
+        tex.usage |= usage;
+    }
+};
+
+
 function findCbuffers(csh: IShader, pass: ITechnique11RenderPass): CBBundleT[] {
     return pass.shaders.find(sh => sh.entryName == csh.name).cbuffers;
+}
+
+function findTextures(csh: IShader, pass: ITechnique11RenderPass): TextureBundleT[] {
+    return pass.shaders.find(sh => sh.entryName == csh.name).textures;
 }
 
 function findShader(csh: IShader, pass: ITechnique11RenderPass): VertexShaderT | PixelShaderT {
@@ -139,7 +193,7 @@ async function precompileShader(csh: IShader, pass: ITechnique11RenderPass): Pro
     const scope = slDocument.root.scope;
     const ctx = new GLSLContext({ mode: csh.ver.substring(0, 2) as CodeContextMode });
     const codeGLSL = GLSLEmitter.translate(scope.findFunction(csh.name, null), ctx);
-    // console.log(sh.code);
+    // console.log(code);
     // console.log(codeGLSL);
     return codeGLSL;
 }
@@ -170,10 +224,11 @@ class GraphicsPipelineStateObject {
 }
 
 
-class RenderPass {
+class RenderPassDriver {
     graphicsPsoDesc: GraphicsPipelineStateDesc = new GraphicsPipelineStateDesc;
 
-    constructor(pass: ITechnique11RenderPass) {
+    
+    constructor(public pass: ITechnique11RenderPass, public name: string) {
         const render = pass.render;
         for (const { name, id } of render.getExterns()) {
             switch (name) {
@@ -190,14 +245,32 @@ class RenderPass {
                     render.setExtern(id, this.setDepthStencilState.bind(this, pass));
                     break;
                 case 'SetRenderTargets':
-                    render.setExtern(id, this.setRenderTargets.bind(this));
+                    render.setExtern(id, this.setRenderTargets.bind(this, pass));
                     break;
             }
         }
     }
 
 
-    setRenderTargets(rtv: IRenderTargetView, dsv: IDepthStencilView) {
+    reset() {
+        const pass = this.pass;
+        this.setRenderTargets(pass, null, null);
+        this.setVertexShader(pass, null);
+        this.setPixelShader(pass, null);
+        this.setDepthStencilState(pass, GraphicsPipelineStateDesc.DEPTH_STENCIL_STATE_DEFAULT, 0);
+    }
+
+
+    apply(uniforms: Uniforms) {
+        for (const name in uniforms) {
+            this.pass.render.setConstant(name, uniforms[name]);
+        }
+        this.pass.render.play();
+    }
+
+    ///
+
+    setRenderTargets(pass: ITechnique11RenderPass, rtv: IRenderTargetView, dsv: IDepthStencilView) {
         this.graphicsPsoDesc.rtv = rtv;
     }
 
@@ -259,23 +332,24 @@ class RenderPass {
 }
 
 
-function createRenderPasses(tech: ITechnique11) {
+function createRenderPassDrivers(tech: ITechnique11) {
     const passNum = tech.getPassCount();
     const renderPasses = [];
     for (let i = 0; i < passNum; ++i) {
         const pass = tech.getPass(i);
-        renderPasses.push(new RenderPass(pass));
+        renderPasses.push(new RenderPassDriver(pass, `pass-${i}`));
     }
     return renderPasses;
 }
 
 
 async function precompileGraphicsPso(
-    desc: GraphicsPipelineStateDesc,
-    pass: ITechnique11RenderPass,
+    driver: RenderPassDriver,
     deps: ResourceDependencies,
     controls: IPlaygroundControlsState
 ): Promise<GraphicsPipelineStateObject> {
+    const pass = driver.pass;
+    const desc = driver.graphicsPsoDesc;
     const hash = desc.hash();
     const { depthStencilState, vs, ps } = desc;
 
@@ -285,9 +359,16 @@ async function precompileGraphicsPso(
     scanCbuffer(cbufs, findCbuffers(vs.csh, pass), EUsage.k_Vertex);
     scanCbuffer(cbufs, findCbuffers(ps.csh, pass), EUsage.k_Pixel);
 
+    // merge VS & PS textures into shared list 
+    // it's guaranteed by translator that buffers with the same name are the same
+    const texs: IMap<ITexture> = {};
+    scanTexture(texs, findTextures(vs.csh, pass), EUsage.k_Vertex);
+    scanTexture(texs, findTextures(ps.csh, pass), EUsage.k_Pixel);
+
     const cbuffers = Object.values(cbufs);
+    const textures = Object.values(texs);
     const ugroups = GroupedUniforms.create(cbuffers);
-    const uniforms = SingleUniforms.create(controls, deps);
+    const uniforms = SingleUniforms.create(controls, deps, textures);
 
     const vertexShader = await precompileShader(vs.csh, pass);
     const fragmentShader = await precompileShader(ps.csh, pass);
@@ -394,18 +475,18 @@ async function loadObjModel(name: string): Promise<THREE.Group> {
 }
 
 
-function createRenderTarget(name: string, width: number, height: number, renderer: THREE.WebGLRenderer): THREE.WebGLRenderTarget {
+function createRenderTarget(name: string, width: number = 1024, height: number = 1024, 
+    format: THREE.PixelFormat = THREE.RGBAFormat, type: THREE.TextureDataType = THREE.FloatType): THREE.WebGLRenderTarget {
     // note: depth texture will be create automatically (!)
     const parameters: THREE.WebGLRenderTargetOptions = {
         minFilter: THREE.LinearFilter,
         magFilter: THREE.LinearFilter,
-        format: THREE.RGBAFormat,
-        type: THREE.FloatType
+        format,
+        type
     };
 
-    const pixelRatio = renderer.getPixelRatio();
-    const rt = new THREE.WebGLRenderTarget(width * pixelRatio, height * pixelRatio, parameters);
-
+    const rt = new THREE.WebGLRenderTarget(width, height, parameters);
+    
     console.log(`New render target <${name} ${width}x${height}> has been created.`);
     return rt;
 }
@@ -424,8 +505,6 @@ relinkThreeMeshAttributes(rttQuad);
 /** Dedicated render to texture scene of single object. */
 const rttScene = createRenderToTextureScene(rttQuad);
 
-import * as GLSL from './shaders/fx';
-const Shaders = (id: string) => GLSL[id];
 
 interface IRTViewProps {
     aspect?: number; // w / h
@@ -479,7 +558,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         };
     }
 
-    passes: RenderPass[];
+    drivers: RenderPassDriver[];
     graphicsPsoCache: Record<string, GraphicsPipelineStateObject> = {};
     dynamicTargets: Record<string, THREE.WebGLRenderTarget> = {};
     dynamicTextures: Record<string, THREE.Texture> = {};
@@ -492,13 +571,24 @@ class Technique11Scene extends HDRScene<IProps, IState> {
     resources = new ResourceDependencies;
 
 
-    precreateDynamicTarget(rtv: IRenderTargetView, width: number, height: number): THREE.WebGLRenderTarget {
+    precreateDynamicTarget(rtv: IRenderTargetView, width: number = 1024, height: number = 1024): THREE.WebGLRenderTarget {
         if (!rtv) {
             return null;
         }
         let rt = this.dynamicTargets[rtv.name];
+
+        const ttp: Record<ERenderTargetFormats, THREE.PixelFormat> = {
+            [ERenderTargetFormats.k_rgba8]: THREE.RGBAFormat,
+            [ERenderTargetFormats.k_rgba32]: THREE.RGBAFormat,
+        };
+
+        const tft: Record<ERenderTargetFormats, THREE.TextureDataType> = {
+            [ERenderTargetFormats.k_rgba8]: THREE.UnsignedByteType,
+            [ERenderTargetFormats.k_rgba32]: THREE.FloatType,
+        };
+
         if (!rt) {
-            rt = this.dynamicTargets[rtv.name] = createRenderTarget(rtv.name, width, height, this.renderer);
+            rt = this.dynamicTargets[rtv.name] = createRenderTarget(rtv.name, width, height, ttp[rtv.format], tft[rtv.format]);
             if (rtv.texture) {
                 this.dynamicTextures[rtv.texture] = rt.texture;
             }
@@ -517,7 +607,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
                 case 'plane':
                     this.probe = createPlane();
                     break;
-                default:
+                default: 
                     this.probe = await loadObjModel(name);
             }
 
@@ -547,8 +637,8 @@ class Technique11Scene extends HDRScene<IProps, IState> {
             }
         }
         
-        const pad = 0.05; // pad between targets
-        const size = 0.5; // size of target (% of width)
+        const pad = 0.025; // pad between targets
+        const size = 0.25; // size of target (% of width)
 
         const { gui } = this.gui;
         const rtFodler = gui.addFolder(`[render targets]`);
@@ -559,7 +649,12 @@ class Technique11Scene extends HDRScene<IProps, IState> {
             
             rtFodler.add(rtvsRenderToScreen, name).onChange(value => {
                 // dynamic texture are created on demand (by requests from bytecode)
-                const tex = dynamicTargets?.[name].texture || null;
+                const rt = dynamicTargets?.[name];
+                if (!rt) {
+                    console.error(`Render target <${name}> doesn't exist.`);
+                    return;
+                }
+                const tex = rt.texture || null;
                 // todo: add resize support
                 overrideRTViewerTexture(rtViewer, tex);
 
@@ -583,11 +678,11 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         const { technique, controls } = this.props;
 
         
-        const doLoadTexture = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
+        const doLoadTexture = true;//Object.values(controls?.controls).map(ctrl => ctrl.type).includes('texture2d');
         const doLoadMeshes = Object.values(controls?.controls).map(ctrl => ctrl.type).includes('mesh');
         this.resources.resolve(doLoadTexture, doLoadMeshes);
         
-        this.passes = createRenderPasses(technique);
+        this.drivers = createRenderPassDrivers(technique);
         
         this.gui.create(controls);
         this.createRTVsDebugUi(); // todo: move on inside GuiView ?
@@ -602,7 +697,7 @@ class Technique11Scene extends HDRScene<IProps, IState> {
         const { technique, controls } = this.props;
         if (prevProps.technique !== technique) {
             console.info(`Technique 11 scene has been updated.`);
-            this.passes = createRenderPasses(technique);
+            this.drivers = createRenderPassDrivers(technique);
 
             this.gui.remove();
             this.gui.create(controls);
@@ -612,17 +707,30 @@ class Technique11Scene extends HDRScene<IProps, IState> {
 
     /** Create new PSO if needed. */
     async precompileGrapicsPso(
-        desc: GraphicsPipelineStateDesc,
-        pass: ITechnique11RenderPass,
+        driver: RenderPassDriver,
         resources: ResourceDependencies,
         controls: IPlaygroundControlsState) {
+        const desc = driver.graphicsPsoDesc;
         const hash = desc.hash();
         let pso = this.graphicsPsoCache[hash];
         if (!pso) {
             pso = this.graphicsPsoCache[hash]
-                = await precompileGraphicsPso(desc, pass, resources, controls);
+                = await precompileGraphicsPso(driver, resources, controls);
         }
         return pso;
+    }
+
+
+    protected setupRenderConstans() {
+        const { timeline } = this.props;
+
+        // todo: get out constants setup
+        const frameNumber = timeline.getConstants().frameNumber;
+        
+        const helper = UniformHelper();
+        helper.set('FRAME_NUMBER').int(frameNumber);
+        const uniforms = helper.finish();
+        return uniforms;
     }
 
 
@@ -633,49 +741,49 @@ class Technique11Scene extends HDRScene<IProps, IState> {
             return;
         }
 
-        const { timeline, controls, technique } = this.props;
-        const { resources, camera, mount, dynamicTextures } = this;
-        const passNum = technique.getPassCount();
+        const { timeline, controls } = this.props;
+        const { resources, camera, mount, dynamicTextures, drivers, probe, renderer } = this;
+        const originalRT = renderer.getRenderTarget();
 
-        for (let i = 0; i < passNum; ++i) {
-            const pass = technique.getPass(i);
+        const activeRTs = new ActiveRTs();
 
-            const { render } = pass;
-            const { graphicsPsoDesc } = this.passes[i];
+        for (const passDriver of drivers) {
 
+            const { graphicsPsoDesc } = passDriver;
+            
             const psoHashPrev = graphicsPsoDesc.hash();
-
-            render.play();
-
+            
+            activeRTs.reset();
+            passDriver.reset(); // reset pipeline state
+            renderer.setRenderTarget(originalRT);
+            
+            const uniforms = this.setupRenderConstans();
+            passDriver.apply(uniforms);
+            
             if (!graphicsPsoDesc.isVlaid()) {
-                console.warn(`Invalid graphics pass <P${i}> has bee applied.`);
+                console.warn(`Invalid graphics pass <${passDriver.name}> has bee applied.`);
                 continue;
             }
-
+            
             const psoHash = graphicsPsoDesc.hash();
             if (psoHash !== psoHashPrev) {
                 console.log(`switch pso <${psoHashPrev}> => <${psoHash}>`);
             }
+            
+            const currentRT = this.precreateDynamicTarget(graphicsPsoDesc.rtv); // 1024 x 1024
+            renderer.setRenderTarget(currentRT);
 
-            const graphicsPso = await this.precompileGrapicsPso(graphicsPsoDesc, pass, resources, controls);
-            graphicsPso.setUniforms(resources, camera, mount, controls, timeline, dynamicTextures);
+            const viewport = currentRT ? rt2Viewport(currentRT) : div2Viewport(mount);
+            const graphicsPso = await this.precompileGrapicsPso(passDriver, resources, controls);
+            
+            graphicsPso.setUniforms(resources, camera, viewport, controls, timeline, dynamicTextures);
 
-            ///////////////////////////////////////////////
-
-            const { probe, renderer } = this;
-
-            const currentRT = this.precreateDynamicTarget(graphicsPsoDesc.rtv, mount.clientWidth, mount.clientHeight);
-            const renderToTexture = currentRT !== null;
-
-            if (renderToTexture) {
-                const originalRT = renderer.getRenderTarget();
-                renderer.setRenderTarget(currentRT);
-
+            activeRTs.add(graphicsPsoDesc.rtv);
+            activeRTs.unbindTextures(graphicsPso);
+            
+            if (currentRT) {
                 overrideGroupMaterial(rttQuad, graphicsPso.material);
                 renderer.render(rttScene, camera); // note: render without composer or any additional passes
-
-                renderer.setRenderTarget(originalRT);
-                continue;
             } else {
                 overrideGroupMaterial(probe, graphicsPso.material);
                 super.renderFrame();

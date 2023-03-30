@@ -68,14 +68,18 @@ public struct VertexShader : IFlatbufferObject
   public TypeLayout? Input { get { int o = __p.__offset(10); return o != 0 ? (TypeLayout?)(new TypeLayout()).__assign(__p.__indirect(o + __p.bb_pos), __p.bb) : null; } }
   public CBBundle? Cbuffers(int j) { int o = __p.__offset(12); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int CbuffersLength { get { int o = __p.__offset(12); return o != 0 ? __p.__vector_len(o) : 0; } }
+  public TextureBundle? Textures(int j) { int o = __p.__offset(14); return o != 0 ? (TextureBundle?)(new TextureBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public int TexturesLength { get { int o = __p.__offset(14); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.VertexShader> CreateVertexShader(FlatBufferBuilder builder,
       uint crc32 = 0,
       StringOffset codeOffset = default(StringOffset),
       StringOffset entryNameOffset = default(StringOffset),
       Offset<TypeLayout> inputOffset = default(Offset<TypeLayout>),
-      VectorOffset cbuffersOffset = default(VectorOffset)) {
-    builder.StartTable(5);
+      VectorOffset cbuffersOffset = default(VectorOffset),
+      VectorOffset texturesOffset = default(VectorOffset)) {
+    builder.StartTable(6);
+    VertexShader.AddTextures(builder, texturesOffset);
     VertexShader.AddCbuffers(builder, cbuffersOffset);
     VertexShader.AddInput(builder, inputOffset);
     VertexShader.AddEntryName(builder, entryNameOffset);
@@ -84,7 +88,7 @@ public struct VertexShader : IFlatbufferObject
     return VertexShader.EndVertexShader(builder);
   }
 
-  public static void StartVertexShader(FlatBufferBuilder builder) { builder.StartTable(5); }
+  public static void StartVertexShader(FlatBufferBuilder builder) { builder.StartTable(6); }
   public static void AddCrc32(FlatBufferBuilder builder, uint crc32) { builder.AddUint(0, crc32, 0); }
   public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(1, codeOffset.Value, 0); }
   public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(2, entryNameOffset.Value, 0); }
@@ -95,6 +99,12 @@ public struct VertexShader : IFlatbufferObject
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartCbuffersVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
+  public static void AddTextures(FlatBufferBuilder builder, VectorOffset texturesOffset) { builder.AddOffset(5, texturesOffset.Value, 0); }
+  public static VectorOffset CreateTexturesVector(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<TextureBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<TextureBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static void StartTexturesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static Offset<Fx.VertexShader> EndVertexShader(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.VertexShader>(o);
@@ -111,6 +121,8 @@ public struct VertexShader : IFlatbufferObject
     _o.Input = this.Input.HasValue ? this.Input.Value.UnPack() : null;
     _o.Cbuffers = new List<CBBundleT>();
     for (var _j = 0; _j < this.CbuffersLength; ++_j) {_o.Cbuffers.Add(this.Cbuffers(_j).HasValue ? this.Cbuffers(_j).Value.UnPack() : null);}
+    _o.Textures = new List<TextureBundleT>();
+    for (var _j = 0; _j < this.TexturesLength; ++_j) {_o.Textures.Add(this.Textures(_j).HasValue ? this.Textures(_j).Value.UnPack() : null);}
   }
   public static Offset<Fx.VertexShader> Pack(FlatBufferBuilder builder, VertexShaderT _o) {
     if (_o == null) return default(Offset<Fx.VertexShader>);
@@ -123,13 +135,20 @@ public struct VertexShader : IFlatbufferObject
       for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = CBBundle.Pack(builder, _o.Cbuffers[_j]); }
       _cbuffers = CreateCbuffersVector(builder, __cbuffers);
     }
+    var _textures = default(VectorOffset);
+    if (_o.Textures != null) {
+      var __textures = new Offset<TextureBundle>[_o.Textures.Count];
+      for (var _j = 0; _j < __textures.Length; ++_j) { __textures[_j] = TextureBundle.Pack(builder, _o.Textures[_j]); }
+      _textures = CreateTexturesVector(builder, __textures);
+    }
     return CreateVertexShader(
       builder,
       _o.Crc32,
       _code,
       _entryName,
       _input,
-      _cbuffers);
+      _cbuffers,
+      _textures);
   }
 }
 
@@ -140,6 +159,7 @@ public class VertexShaderT
   public string EntryName { get; set; }
   public TypeLayoutT Input { get; set; }
   public List<CBBundleT> Cbuffers { get; set; }
+  public List<TextureBundleT> Textures { get; set; }
 
   public VertexShaderT() {
     this.Crc32 = 0;
@@ -147,6 +167,7 @@ public class VertexShaderT
     this.EntryName = null;
     this.Input = null;
     this.Cbuffers = null;
+    this.Textures = null;
   }
 }
 
@@ -177,13 +198,17 @@ public struct PixelShader : IFlatbufferObject
   public byte[] GetEntryNameArray() { return __p.__vector_as_array<byte>(8); }
   public CBBundle? Cbuffers(int j) { int o = __p.__offset(10); return o != 0 ? (CBBundle?)(new CBBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
   public int CbuffersLength { get { int o = __p.__offset(10); return o != 0 ? __p.__vector_len(o) : 0; } }
+  public TextureBundle? Textures(int j) { int o = __p.__offset(12); return o != 0 ? (TextureBundle?)(new TextureBundle()).__assign(__p.__indirect(__p.__vector(o) + j * 4), __p.bb) : null; }
+  public int TexturesLength { get { int o = __p.__offset(12); return o != 0 ? __p.__vector_len(o) : 0; } }
 
   public static Offset<Fx.PixelShader> CreatePixelShader(FlatBufferBuilder builder,
       uint crc32 = 0,
       StringOffset codeOffset = default(StringOffset),
       StringOffset entryNameOffset = default(StringOffset),
-      VectorOffset cbuffersOffset = default(VectorOffset)) {
-    builder.StartTable(4);
+      VectorOffset cbuffersOffset = default(VectorOffset),
+      VectorOffset texturesOffset = default(VectorOffset)) {
+    builder.StartTable(5);
+    PixelShader.AddTextures(builder, texturesOffset);
     PixelShader.AddCbuffers(builder, cbuffersOffset);
     PixelShader.AddEntryName(builder, entryNameOffset);
     PixelShader.AddCode(builder, codeOffset);
@@ -191,7 +216,7 @@ public struct PixelShader : IFlatbufferObject
     return PixelShader.EndPixelShader(builder);
   }
 
-  public static void StartPixelShader(FlatBufferBuilder builder) { builder.StartTable(4); }
+  public static void StartPixelShader(FlatBufferBuilder builder) { builder.StartTable(5); }
   public static void AddCrc32(FlatBufferBuilder builder, uint crc32) { builder.AddUint(0, crc32, 0); }
   public static void AddCode(FlatBufferBuilder builder, StringOffset codeOffset) { builder.AddOffset(1, codeOffset.Value, 0); }
   public static void AddEntryName(FlatBufferBuilder builder, StringOffset entryNameOffset) { builder.AddOffset(2, entryNameOffset.Value, 0); }
@@ -201,6 +226,12 @@ public struct PixelShader : IFlatbufferObject
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<CBBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
   public static VectorOffset CreateCbuffersVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<CBBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
   public static void StartCbuffersVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
+  public static void AddTextures(FlatBufferBuilder builder, VectorOffset texturesOffset) { builder.AddOffset(4, texturesOffset.Value, 0); }
+  public static VectorOffset CreateTexturesVector(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); for (int i = data.Length - 1; i >= 0; i--) builder.AddOffset(data[i].Value); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, Offset<TextureBundle>[] data) { builder.StartVector(4, data.Length, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, ArraySegment<Offset<TextureBundle>> data) { builder.StartVector(4, data.Count, 4); builder.Add(data); return builder.EndVector(); }
+  public static VectorOffset CreateTexturesVectorBlock(FlatBufferBuilder builder, IntPtr dataPtr, int sizeInBytes) { builder.StartVector(1, sizeInBytes, 1); builder.Add<Offset<TextureBundle>>(dataPtr, sizeInBytes); return builder.EndVector(); }
+  public static void StartTexturesVector(FlatBufferBuilder builder, int numElems) { builder.StartVector(4, numElems, 4); }
   public static Offset<Fx.PixelShader> EndPixelShader(FlatBufferBuilder builder) {
     int o = builder.EndTable();
     return new Offset<Fx.PixelShader>(o);
@@ -216,6 +247,8 @@ public struct PixelShader : IFlatbufferObject
     _o.EntryName = this.EntryName;
     _o.Cbuffers = new List<CBBundleT>();
     for (var _j = 0; _j < this.CbuffersLength; ++_j) {_o.Cbuffers.Add(this.Cbuffers(_j).HasValue ? this.Cbuffers(_j).Value.UnPack() : null);}
+    _o.Textures = new List<TextureBundleT>();
+    for (var _j = 0; _j < this.TexturesLength; ++_j) {_o.Textures.Add(this.Textures(_j).HasValue ? this.Textures(_j).Value.UnPack() : null);}
   }
   public static Offset<Fx.PixelShader> Pack(FlatBufferBuilder builder, PixelShaderT _o) {
     if (_o == null) return default(Offset<Fx.PixelShader>);
@@ -227,12 +260,19 @@ public struct PixelShader : IFlatbufferObject
       for (var _j = 0; _j < __cbuffers.Length; ++_j) { __cbuffers[_j] = CBBundle.Pack(builder, _o.Cbuffers[_j]); }
       _cbuffers = CreateCbuffersVector(builder, __cbuffers);
     }
+    var _textures = default(VectorOffset);
+    if (_o.Textures != null) {
+      var __textures = new Offset<TextureBundle>[_o.Textures.Count];
+      for (var _j = 0; _j < __textures.Length; ++_j) { __textures[_j] = TextureBundle.Pack(builder, _o.Textures[_j]); }
+      _textures = CreateTexturesVector(builder, __textures);
+    }
     return CreatePixelShader(
       builder,
       _o.Crc32,
       _code,
       _entryName,
-      _cbuffers);
+      _cbuffers,
+      _textures);
   }
 }
 
@@ -242,12 +282,14 @@ public class PixelShaderT
   public string Code { get; set; }
   public string EntryName { get; set; }
   public List<CBBundleT> Cbuffers { get; set; }
+  public List<TextureBundleT> Textures { get; set; }
 
   public PixelShaderT() {
     this.Crc32 = 0;
     this.Code = null;
     this.EntryName = null;
     this.Cbuffers = null;
+    this.Textures = null;
   }
 }
 

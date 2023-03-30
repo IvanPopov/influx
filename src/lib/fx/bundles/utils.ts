@@ -23,17 +23,19 @@ import { MeshValueT } from "@lib/idl/bundles/auto/fx/mesh-value";
 import { UIControlT } from "@lib/idl/bundles/auto/fx/uicontrol";
 import { PresetT } from "@lib/idl/bundles/auto/fx/preset";
 import { Bundle, BundleT } from "@lib/idl/bundles/auto/fx/bundle";
+import { BoolValueT } from "@lib/idl/bundles/auto/FxBundle_generated";
 
-export type PropertyValueType = number | string;
+export type PropertyValueType = number | string | boolean;
 export type ControlValueType = boolean | number | Vector2 | Vector3 | Vector4 | Color | string;
-export type PropertyValueT = UintValueT | IntValueT | FloatValueT | StringValueT;
-export type ControlValueT = UintValueT | IntValueT | FloatValueT | Float2ValueT | Float3ValueT | Float4ValueT | ColorValueT | TextureValueT;
+export type PropertyValueT = BoolValueT | UintValueT | IntValueT | FloatValueT | StringValueT;
+export type ControlValueT = BoolValueT |UintValueT | IntValueT | FloatValueT | Float2ValueT | Float3ValueT | Float4ValueT | ColorValueT | TextureValueT;
 
 // -----------------------------------------------------------------------------------------
 
 /** Get flatbuffers control value type from string constant. */
 export function controlValueFromString(type: string) : ControlValue {
     switch(type) {
+        case 'bool': return ControlValue.BoolValue; 
         case 'int': return ControlValue.IntValue;
         case 'uint': return ControlValue.UintValue;
         case 'float': return ControlValue.FloatValue;
@@ -52,6 +54,7 @@ export function controlValueFromString(type: string) : ControlValue {
 /** Get flatbuffers property value type from string constant. */
 export function propertyValueFromString(type: string) : PropertyValue {
     switch(type) {
+        case 'bool': return PropertyValue.BoolValue;
         case 'int': return PropertyValue.IntValue;
         case 'uint': return PropertyValue.UintValue;
         case 'float': return PropertyValue.FloatValue;
@@ -64,6 +67,7 @@ export function propertyValueFromString(type: string) : PropertyValue {
 /** Encode native JS data to flatbuffers value. */
 export function encodeControlValue(type: string, data: ControlValueType) : ControlValueT {
     switch(type) {
+        case 'bool': return new BoolValueT(data as boolean); 
         case 'int': return new IntValueT(data as number);
         case 'uint': return new UintValueT(data as number);
         case 'float': return new FloatValueT(data as number);
@@ -96,6 +100,7 @@ export function encodeControlValue(type: string, data: ControlValueType) : Contr
 /** Encode native JS data to flatbuffers value. */
 export function encodePropertyValue(type: string, data: PropertyValueType) : PropertyValueT {
     switch(type) {
+        case 'bool': return new BoolValueT(data as boolean); 
         case 'int': return new IntValueT(data as number);
         case 'uint': return new UintValueT(data as number);
         case 'float': return new FloatValueT(data as number);
@@ -108,6 +113,7 @@ export function encodePropertyValue(type: string, data: PropertyValueType) : Pro
 
 export function controlValueToString(type: ControlValue) : string {
     switch(type) {
+        case ControlValue.BoolValue: return 'bool';
         case ControlValue.IntValue: return 'int';
         case ControlValue.UintValue: return 'uint';
         case ControlValue.FloatValue: return 'float';
@@ -125,6 +131,7 @@ export function controlValueToString(type: ControlValue) : string {
 
 export function propertyValueToString(type: PropertyValue) : string {
     switch(type) {
+        case PropertyValue.BoolValue: return 'bool';
         case PropertyValue.IntValue: return 'int';
         case PropertyValue.UintValue: return 'uint';
         case PropertyValue.FloatValue: return 'float';
@@ -137,6 +144,7 @@ export function propertyValueToString(type: PropertyValue) : string {
 
 export function decodeControlValue(type: ControlValue, data: ControlValueT) : ControlValueType {
     switch(type) {
+        case ControlValue.BoolValue: return (data as BoolValueT).value;
         case ControlValue.IntValue: return (data as IntValueT).value;
         case ControlValue.UintValue: return (data as UintValueT).value;
         case ControlValue.FloatValue: return (data as FloatValueT).value;
@@ -164,6 +172,7 @@ export function decodeControlValue(type: ControlValue, data: ControlValueT) : Co
 
 export function decodePropertyValue(type: PropertyValue, data: PropertyValueT) : PropertyValueType {
     switch(type) {
+        case PropertyValue.BoolValue: return (data as BoolValueT).value;
         case PropertyValue.IntValue: return (data as UintValueT).value;
         case PropertyValue.UintValue: return (data as IntValueT).value;
         case PropertyValue.FloatValue: return (data as FloatValueT).value;
@@ -260,6 +269,9 @@ export function encodePlaygroundControlsToString(controls: IPlaygroundControlsSt
         const args = [];
 
         switch (controls.controls[name].type) {
+            case 'bool':
+                args.push(!!value); 
+                break;
             case 'int':
             case 'uint':
                 args.push(Math.round(Number(value))); 
@@ -294,6 +306,7 @@ export function encodePlaygroundControlsToString(controls: IPlaygroundControlsSt
 
 export function cloneValue(type : string, value : ControlValueType) : ControlValueType {
     switch(type) {
+        case 'bool':
         case 'int':
         case 'uint':
         case 'float':

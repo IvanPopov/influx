@@ -24,7 +24,7 @@ import { Uniforms } from '@lib/idl/Uniforms';
 import { prepareTrimesh } from './utils/adjacency';
 import { ResourceDependencies, IResourceDependencies } from './utils/deps';
 import { GuiView } from './utils/gui';
-import { GroupedUniforms } from './utils/GroupedUniforms';
+import { div2Viewport, GroupedUniforms } from './utils/GroupedUniforms';
 import { SingleUniforms } from './utils/SingleUniforms';
 
 import '@sandbox/styles/custom/dat-gui.css';
@@ -883,7 +883,7 @@ class FxScene extends HDRScene<IFxSceneProps, IFxSceneState> {
         const controls = this.props.controls;
         const tech9 = this.props.emitter;
         const camera = this.camera;
-        const viewport = this.mount;
+        const viewport = div2Viewport(this.mount);
         const deps = this.deps;
         const preset = this.gui.preset();
 

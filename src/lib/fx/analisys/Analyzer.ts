@@ -1585,7 +1585,6 @@ export class Analyzer {
                 return this.analyzeCompileExpr(context, program, sourceNode);
             case 'T_KW_COMPILE_SHADER':
                 return this.analyzeCompileShader11(context, program, sourceNode);
-                return null;
             default:
         }
         return null;

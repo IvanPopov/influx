@@ -1,6 +1,6 @@
 import { IMap } from '@lib/idl/IMap';
-import { EUsage, IConstantBuffer, ITechnique9, ITechnique9PassDesc } from '@lib/idl/ITechnique9';
-import { ITechnique } from '@lib/idl/ITechnique';
+import { ITechnique9, ITechnique9PassDesc } from '@lib/idl/ITechnique9';
+import { EUsage, IConstantBuffer, ITechnique } from '@lib/idl/ITechnique';
 
 import { BundleT } from '@lib/idl/bundles/auto/fx/bundle';
 import { MatBundleT } from '@lib/idl/bundles/auto/fx/mat-bundle';

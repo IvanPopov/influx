@@ -2235,6 +2235,8 @@ export function translate(a, b?): IBCDocument {
     } catch (e) {
         if (!(e instanceof DiagnosticException)) {
             throw e;
+        } else {
+            console.error(e);
         }
     }
     if (!PRODUCTION) {
